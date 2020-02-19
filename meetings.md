@@ -38,7 +38,7 @@
 
 - Regarding this second point, Matthias suggested looking at Yahoo's
   "Predictalot" program, which was a program on which to host prediction
-  markets. These allow users to bid on outcomes of various evetns, e.g. the
+  markets. These allow users to bid on outcomes of various events, e.g. the
   winner of the presidential election, and combines them. Hence this is (at
   least superficially) related to combinatorial auctions. Since people are
   betting their money, they also give an indication as to how people "really
@@ -76,6 +76,9 @@
 
 - Came across [Augur][Augur] and [PredictIt][PredictIt] while reading around
   the area of prediction markets, so I will have a look at them this week.
+
+[Augur]: https://github.com/AugurProject/augur
+[PredictIt]: https://www.predictit.org/
 
 ### TODO
 - Set out concrete plan of features and roadmap for project -- structure,
