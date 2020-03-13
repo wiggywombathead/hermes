@@ -85,3 +85,38 @@
   features, core functionality and research to implement
 
 - Finish research proposal on this for Thursday
+
+## 2020/02/25
+- Proposal finished and outline of project details given: web application in
+  Common Lisp for hosting two-sided combinatorial prediction markets
+
+### TODO
+- Read up on how prediction markets are implemented
+
+## 2020/03/03
+- No meeting this week: sent Matthias an email explaining that I had little to
+  say this week as focus was placed on other pieces of work, given the time
+  that writing the research proposal had taken up
+
+## 2020/03/10
+- Showed Matthias a [paper][crowdsourcedPDF] I had read on decentralised
+  prediction markets: [Crowdsourced Outcome Determination in Prediction
+  Markets][crowdsourced]. This could be quite useful to implement as the whole
+  idea about _Predictalot_ was removing restrictions on the types of bet you
+  can make. If you completely remove the restrictions and leave it to the
+  agents to verify the outcome of (potentially ambiguous) bets, then it is much
+  more flexible (but perhaps less economically efficient -- opportunity to
+  explore this)
+
+- Also discussed the date of the presentation (24/04) and what to include in
+  it. Largely it will be a discussion of what the project is, but he advised it
+  would be good to have some working code to demonstrate as well
+
+### TODO
+- Understand the technical details of the paper, including the theorems and
+  their proofs, as it will make it easier to write/talk about
+
+- Start writing up demonstration code and thinking about presentation
+
+[crowdsourcedPDF]: https://arxiv.org/pdf/1612.04885.pdf
+[crowdsourced]: https://arxiv.org/abs/1612.04885
