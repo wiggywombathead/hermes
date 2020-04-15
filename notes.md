@@ -12,9 +12,10 @@
 [parenscript]: https://common-lisp.net/project/parenscript/tutorial.html
 [implementation]: https://github.com/JohnNay/predMarket
 
-## Market mechanism
+## Scoring Rule Markets
 
-### Scoring Rule Market
+Information taken from [CultivateLabs][cultivate-labs] and [David Pennock's
+blog][oddhead].
 
 Scoring rules are measures of the accuracy of probabilistic predictions and are
 applicable to tasks where probabilities must be assigned to a set of mutually
@@ -48,7 +49,7 @@ The most common market scoring rule is the Logarithmic Market Scoring Rule
 
 ### Logarithmic Market Scoring Rule
 
-#### Pricing a stock
+#### Quoting a stock's price
 
 Suppose we have a market with two stocks of which there are `q_1` outstanding
 shares for one and `q_2` outstanding shares for the other. The number of
@@ -67,7 +68,7 @@ dollar trading amount, and large number of shares will need to be purchased to
 change the price significantly. For smaller markets with less activity (as ours
 will likely be), a smaller `b` is appropriate.
 
-The LSMR can be can be extended to account for any number of stocks:
+The LMSR can be can be extended to account for any number of stocks:
 
 ```
 price(i) = e^(q_i / b) / (sum_j (e^(q_j / b)))
@@ -77,7 +78,7 @@ We may replace "number of stocks" with "number of outcomes for the event". For
 a binary outcome, `q1` tracks the number of shares bought on the YES outcome
 and `q2` tracks the number of shares bought on the NO outcome.
 
-#### Costing a trade
+#### Pricing a trade
 
 Determining the cost of a given trade is done using:
 
@@ -86,12 +87,9 @@ cost = b * ln(e^(q_1 / b) + e^(q_2 / b))
 ```
 
 The amount that a trader must pay to acquire the shares is the difference
-between the cost before the trade and the cost after the trade.
-
-#### Our market
-
-In our market, an agent wishing to purchase `q' - q` shares of a security pays
-`C(q') - C(q)`. The cost function is:
+between the cost before the trade and the cost after the trade: an agent
+wishing to purchase `q' - q` shares of a security pays `C(q') - C(q)`. The cost
+function is:
 
 ```
 C_b(q) = b log(1 + e^(q/b))
@@ -107,8 +105,8 @@ p(q) = e^(q/b) / (1 + e^(q/b))
 ```
 
 Suppose there are `q = 10` outstanding shares of stock A of which Alice wants
-to buy `q' - q = 7` shares. Let `b = 4`. So Alice will pay `C(17) - C(10) = 10
-* log((1+e^(17/10))/(1+e))`.
+to buy `q' - q = 7` shares. Let `b = 4`. So Alice will pay `C(17) - C(10) = 4
+log((1+e^(17/10))/(1+e))`.
 
 ### Other crowdsourced forecasting tools
 
@@ -118,3 +116,42 @@ occurring. Opinion Pool platforms take these estimates and aggregate them to
 generate a consensus. The algorithm for aggregating the forecasts into this
 consensus can be as simple as taking the mean, but can be much more complex.
 
+[cultivate-labs]: https://www.cultivatelabs.com/prediction-markets-guide/what-are-the-different-types-of-prediction-markets
+[oddhead]: http://blog.oddhead.com/2006/10/30/implementing-hansons-market-maker/
+
+## Market mechanism
+
+We implement the crowdsourced outcome-determination mechanism from [this
+paper][CODiPM]
+
+The market in its entirety is:
+- Market stage
+  - set up prediction market for event `X` using a market scoring rule
+  - allow agents to trade in the market, charging `fp` for a security bought at
+    price `p` and charging `f(1-p)` for a security sold at price `p`
+  - market closes, trading stops
+- Arbitration stage
+  - each arbiter reports a signal x that is 1 if the event occurs, else 0
+  - each arbiter is randomly assigned another arbiter and paid according to the
+	1/prior with midpoint mechanism
+  - the outcome of the market and the payoff of each share sold is set to the
+	fraction of arbiters that reported x = 1
+
+For the market stage we implement the Logarithmic Market Scoring Rule as
+discussed.
+
+For the arbitration stage, we need to compute a random pairing of the arbiters
+for a given security such that no arbiter is paired to himself. This is simple
+enough, we just shuffle the list of arbiters, loop over the first n/2 players
+and randomly assign them to players in the second half.
+
+As an aside, initially I equated computed a random matching between arbiters to
+computing a random derangement between them -- a permutation where no element
+remains in its original position (this would be the case if the pairing
+relation was not symmetric I think). I implemented this
+[algorithm][random-derangement-algorithm] from Martinez, Panholzer, and
+Prodinger, and while it is now (likely) useless for the rest of the project, it
+was a good exercise.
+
+[CODiPM]: https://arxiv.org/abs/1612.04885
+[random-derangement-algorithm]: https://epubs.siam.org/doi/pdf/10.1137/1.9781611972986.7

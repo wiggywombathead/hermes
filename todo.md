@@ -14,3 +14,7 @@
 
 - [ ] Arbitration
   - [ ] 1/prior midpoint mechanism
+
+- [ ] Documentation
+  - [ ] Development diary notes
+  - [ ] Presentation

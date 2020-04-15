@@ -1,7 +1,7 @@
 ;;;; Implementation of market scoring rules
 
 ;;; Logarithmic Market Scoring Rule (LMSR)
-;;; An agent will pay C(q')-C(q) for attaining q'-q shares of a security,
+;;; An agent will pay C(q')-C(q) for obtaining q'-q shares of a security,
 ;;; where:
 ;;;		C(q) = b * log(1+e^(q/b)) for some quantity q and parameter b
 ;;;		q  = number of outstanding shares of security before transaction
