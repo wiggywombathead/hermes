@@ -4,17 +4,24 @@
 (load "util.lisp")
 
 (defstruct security
-  buy-price
-  sell-price
   query-str			; the event as a string
   deadline			; the date/time when the event will be realised
+  (stakers NIL)		; agents who hold shares of this security
   (arbiters NIL)	; players who hold a stake in the security
-  (shares 0))		; number of outstanding shares of security
+  (shares 0)		; number of outstanding shares of security
+  (payout 0))		; payout price per share
 
 (defstruct agent
   name
   budget
   (portfolio (make-hash-table)))
+
+(defun holds-shares? (agent security)
+  " return T if AGENT holds non-zero shares of SECURITY "
+  (and (gethash security (agent-portfolio agent))
+	   (not (eq 0 (gethash security (agent-portfolio agent))))))
+
+;; TODO: don't treat prices as floats!
 
 ;;; Market Stage
 ;;;  set up the prediction market for an event X using a market scoring rule
@@ -22,25 +29,68 @@
 ;;;	 	- for a security bought at price p, charge fp
 ;;;		- for a security sold at price p, charge f(1-p)
 ;;;	 the market closes and trading stops
+
+(defconstant +trading-fee+ 0.05)	; TODO: tune this parameter?
+
+(defun create-market (query-str deadline)
+  (make-security :query-str query-str :deadline deadline))
+
 (defun trade-security (agent security quantity)
   " buy or sell QUANTITY shares of SECURITY. If QUANTITY > 0 then we are buying
   shares, otherwise we are selling shares "
   (let* ((budget (agent-budget agent))
 		 (portfolio (agent-portfolio agent))
 		 (outstanding (security-shares security))
-		 (cost (transaction-cost (+ quantity outstanding) outstanding)))
+		 (stakers (security-stakers security))
 
-	(if (< budget cost)
+		 (buying-p (> quantity 0))
+		 (selling-p (not buying-p))
+
+		 (price (transaction-cost (+ quantity outstanding) outstanding))
+		 fee
+		 total-fee
+		 total-price)
+
+	;; can't have a "nothing" trade
+	(if (eq quantity 0)
 	  (return-from trade-security NIL))
 
-	(incf (security-shares security) quantity)	; update number of outstanding
+	(if (holds-shares? agent security)
+	  ;; if we are selling owned shares or buying ones already sold
+	  (if (or (and selling-p (> (gethash security portfolio) 0))
+			  (and buying-p (< (gethash security portfolio) 0)))
+		(setf fee 0)
+		(setf fee +trading-fee+))
+	  (setf fee +trading-fee+))
+
+	(setf total-fee (* fee (if buying-p
+							 price			; charge fp
+							 (- 1 price))))	; charge f(1-p)
+
+	(setf total-price (+ price total-fee))
+
+	(format T "Price to buy ~D shares: ~$ + ~$ = ~$~%"
+			quantity price total-fee total-price)
+
+	;; can't afford the transaction
+	(if (> total-price budget)
+	  (return-from trade-security NIL))
+
+	(incf (security-shares security) quantity)	; update outstanding shares
 
 	;; TODO: where is this money going from/to?
-	(decf (agent-budget agent) cost)			; update agent budget
+	(decf (agent-budget agent) total-price)		; update agent budget
 
+	;; update agent's portfolio
 	(if (gethash security portfolio)
 	  (incf (gethash security portfolio) quantity)
-	  (setf (gethash security portfolio) quantity))))
+	  (setf (gethash security portfolio) quantity))
+
+	;; update security's stakers field
+	(if (holds-shares? agent security)
+	  (unless (member agent stakers)
+		(setf (security-stakers security) (cons agent stakers)))
+	  (setf (security-stakers security) (remove agent stakers)))))
 
 ;;; Arbitration Stage
 ;;;  each arbiter receives signal and reports the outcome of X
@@ -52,11 +102,10 @@
 (defun pair-arbiters (arbiters)
   (random-pairing arbiters))
 
-(defparameter s (make-security
-				  :buy-price (random 10)
-				  :sell-price (random 10)
-				  :query-str "biden will win presidency"
-				  :deadline "2020/04/20"))
+(defparameter s
+  (create-market
+	"the weather will be nice on 21/04/2020"
+	"2020/04/22-12:00:00"))
 
 (defparameter a (make-agent :name "alice" :budget 100))
 (defparameter b (make-agent :name "bob" :budget 100))
