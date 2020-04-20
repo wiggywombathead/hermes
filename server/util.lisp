@@ -50,6 +50,5 @@
 (defun random-pairing (lst)
   " randomly pair items from LST together "
   (if (evenp (length lst))
-	(let ((lst (shuffle lst)))
-	  (loop for (a b) on lst by #'cddr while b
-			collect (list a b)))))
+	(loop for (a b) on (shuffle lst) by #'cddr while b
+		  collect (list a b))))
