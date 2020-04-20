@@ -50,16 +50,6 @@
 (defun random-pairing (lst)
   " randomly pair items from LST together "
   (if (evenp (length lst))
-	(let* ((len (length lst))
-		   (lst (make-array len :initial-contents (shuffle lst)))
-		   (paired (make-array len :initial-element NIL))
-		   (pairings NIL)
-		   (j 0))
-	  (loop for i from 0 below (/ len 2) do
-			(loop do
-				  (setf j (random-range len (/ len 2)))
-				  while (aref paired j))
-			(setf (aref paired i) T)
-			(setf (aref paired j) T)
-			(setf pairings (cons (list (aref lst i) (aref lst j)) pairings)))
-	  pairings)))
+	(let ((lst (shuffle lst)))
+	  (loop for (a b) on lst by #'cddr while b
+			collect (list a b)))))
