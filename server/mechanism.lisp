@@ -14,7 +14,8 @@
 (defstruct agent
   name
   budget
-  (portfolio (make-hash-table)))
+  (portfolio (make-hash-table))	; stores shares of securities
+  (reports (make-hash-table)))	; stores reported outcome for security
 
 (defun holds-shares? (agent security)
   " return T if AGENT holds non-zero shares of SECURITY "
@@ -46,7 +47,8 @@
 		 (buying-p (> quantity 0))
 		 (selling-p (not buying-p))
 
-		 (price (transaction-cost (+ quantity outstanding) outstanding))
+		 (cost (transaction-cost (+ quantity outstanding) outstanding))
+		 (price (share-price outstanding))
 		 fee
 		 total-fee
 		 total-price)
@@ -64,13 +66,10 @@
 	  (setf fee +trading-fee+))
 
 	(setf total-fee (* fee (if buying-p
-							 price			; charge fp
+							 price 			; charge fp
 							 (- 1 price))))	; charge f(1-p)
 
-	(setf total-price (+ price total-fee))
-
-	(format T "Price to buy ~D shares: ~$ + ~$ = ~$~%"
-			quantity price total-fee total-price)
+	(setf total-price (+ cost total-fee))
 
 	;; can't afford the transaction
 	(if (> total-price budget)
@@ -80,6 +79,9 @@
 
 	;; TODO: where is this money going from/to?
 	(decf (agent-budget agent) total-price)		; update agent budget
+
+	(format T "~D shares traded for ~$+~$=~$"
+			quantity cost total-fee total-price)
 
 	;; update agent's portfolio
 	(if (gethash security portfolio)
@@ -101,6 +103,23 @@
 
 (defun pair-arbiters (arbiters)
   (random-pairing arbiters))
+
+(defun one-over-prior (i j security mu k)
+  " pay agents I and J according to the one over prior rule "
+  (let ((i-report (gethash security (agent-reports i)))
+		(j-report (gethash security (agent-reports j)))
+		paid)
+
+	;; determine amount to pay based on 1/prior mechanism
+	(setf paid (if (eq i-report j-report)
+				 (if (= i-report 0)
+				   (* k mu)			; x_i = x_j = 0
+				   (* k (- 1 mu)))	; x_i = x_j = 1
+				 0))
+
+	;; pay the agents
+	(incf (agent-budget i) paid)
+	(incf (agent-budget j) paid)))
 
 (defparameter s
   (create-market

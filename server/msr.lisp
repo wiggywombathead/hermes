@@ -16,7 +16,7 @@
 (defconstant +e+ 2.71828182)
 (defconstant +liquidity+ 10)	; TODO: tune this parameter
 
-(defun price (q)
+(defun share-price (q)
   " compute quote price of stock with Q outstanding shares -- not to be used to
   calculate the price an agent must pay "
   (/ (exp (/ q +liquidity+)) (1+ (exp (/ q +liquidity+)))))
