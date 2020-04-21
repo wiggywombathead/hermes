@@ -1,0 +1,392 @@
+% Modelo de slides para projetos de disciplinas do Abel
+\documentclass[9pt]{beamer}
+
+\usetheme[progressbar=frametitle]{metropolis}
+\usepackage{appendixnumberbeamer}
+\usepackage[numbers,sort&compress]{natbib}
+\bibliographystyle{plainnat}
+
+\usepackage{booktabs}
+\usepackage[scale=2]{ccicons}
+
+\usepackage{xspace}
+\newcommand{\themename}{\textbf{\textsc{metropolis}}\xspace}
+
+\usefonttheme[onlymath]{serif}
+
+\usepackage{listings}
+
+\lstdefinestyle{mystyle}{
+    basicstyle=\ttfamily\footnotesize,
+    showlines=false,
+    breakatwhitespace=false,         
+    breaklines=false,                 
+    captionpos=b,                    
+    keepspaces=false,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,              
+    showstringspaces=false,
+}
+
+\lstset{style=mystyle}
+
+\title{A Decentralised Prediction Market}
+\subtitle{CS907 Presentation}
+\date{\today}
+
+\author{Thomas Archbold}
+\institute{Department of Computer Science, University of Warwick}
+\titlegraphic{\hfill\includegraphics[height=1.5cm]{warwick-logo.png}}
+
+\begin{document}
+
+\maketitle
+
+%\begin{frame}{Table of contents}
+%  \setbeamertemplate{section in toc}[sections numbered]
+%  \tableofcontents[hideallsubsections]
+%\end{frame}
+
+% introduction to prediction markets
+% introduction to my project
+% existing literature
+% design overview
+% current progress
+% next steps
+% demo
+% questions
+
+\section{Introduction}
+
+\begin{frame}[fragile]{Prediction Markets}
+    \onslide<1->{\textbf{Prediction Markets} allow you to trade on the outcomes of future events} \\~\\
+    
+    \onslide<2->{Market prices indicate how its traders feel about the outcome of an event}
+    \begin{itemize}
+        \item<3-> traders have different beliefs/knowledge informing their decisions
+        \item<4-> provides means of aggregating information on topics of interest via crowdsourcing (``wisdom of the crowd'')
+    \end{itemize}~\\
+    
+    \onslide<5->{\textbf{Securities} are traded between 0 and 100\%, and the payoff is contingent upon the outcome}
+    \begin{itemize}
+        \item<6-> typically, one share pays out \$1 in the event the outcome occurs, otherwise \$0
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Centralised Prediction Markets}
+    \onslide<1->{Traditional prediction markets are \textbf{centralised}
+    \begin{itemize}
+        \item trusted centre creates and closes market, manages transactions
+        \item determines the outcome of the event and pays out accordingly
+    \end{itemize}}~\\
+    
+    \onslide<2->{This restricts the types of bets that can be made
+    \begin{itemize}
+        \item must be explicitly offered by market maker/system
+        \item high workload on trusted centre
+    \end{itemize}}
+\end{frame}
+
+\begin{frame}{Decentralised markets}
+    \onslide<1->{A \textbf{decentralised market} allows anyone to create markets for events
+    \begin{itemize}
+        \item event outcome is determined by consensus among users (\emph{arbiters})
+    \end{itemize}}~\\
+    
+    \onslide<2->{Removes the need for a trusted centre \textsc{but}:}
+    \begin{itemize}
+        \item<3-> bets may become ambiguous, since there is no central moderator
+        \item<4-> arbiters may manipulate the outcome of the market
+        \item<5-> users still need to bet based on their true beliefs
+    \end{itemize}~\\
+    
+    \onslide<6->{Freeman, Lahaie, and Pennock~\cite{CODiPM} introduced a mechanism that tackles these issues}
+\end{frame}
+
+\begin{frame}{Project Aims}
+    \onslide<1->{\textbf{Goal:} implement a decentralised prediction market} \\~\\
+    
+    \onslide<2->{In particular:}
+    \begin{itemize}
+        \item<3-> create a web-application where users may make and trade bets with virtual money
+        \item<4-> place no restrictions on the bets that can be made
+        \item<5-> outcome is determined by a group of arbiters (who may hold a stake in the market)
+    \end{itemize}~\\
+    
+    \onslide<6->{\textbf{Why is this worthwhile?}
+    \begin{itemize}
+        \item less restrictive way to crowdsource public opinion
+        \item possibility for manipulation requires game-theoretic approach
+    \end{itemize}}
+\end{frame}
+
+\begin{frame}{Related Work}
+    \onslide<1->{Decentralised prediction markets based on cryptocurrencies:}
+    \begin{itemize}
+        \item<2-> \emph{Augur}
+        \begin{itemize}
+            \item reptutation system to protect against manipulation
+        \end{itemize}
+        \item<3-> \emph{Gnosis}
+        \begin{itemize}
+            \item a distributed exchange for ``tokens''
+            \item uses ``trading rings'' to trade the large numbers of illiquid bets
+        \end{itemize}
+        \item<4-> \emph{Hivemind}
+    \end{itemize}~\\
+    
+    \onslide<5->{\emph{Predictalot} was a centralised \textbf{combinatorial} prediction market
+    \begin{itemize}
+        \item combinatorial bids
+        \item combinatorial outcomes
+    \end{itemize}}
+\end{frame}
+
+\section{Design Overview}
+
+\begin{frame}{Mechanism}
+    \textbf{Market stage}
+    \begin{itemize}
+        \item set up market for event $X$ using a \textbf{market scoring rule} (MSR)
+        \item agents trade in the market
+        \item the market closes and trading stops
+    \end{itemize}~\\
+    
+    \textbf{Arbitration stage}
+    \begin{itemize}
+        \item each arbiter receives signal (e.g. reading the news) and reports the outcome
+        \item arbiters are paired randomly and paid according to 1/prior mechanism
+        \item outcome of the market is the fraction of arbiters reporting $X=1$
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Tools}
+    Language: Lisp (SBCL) \\~\\
+    
+    Packages:
+    \begin{itemize}
+        \item Hunchentoot
+        \item CL-WHO
+        \item Parenscript
+        \item Mito
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Current Progress}
+    \begin{itemize}
+        \item Environment setup
+        \item Skeleton code for mechanism
+        \item Logarithmic Market Scoring Rule
+        \item 1/prior payment mechanism
+    \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Web server}
+    The web server is run on Hunchentoot
+    \begin{lstlisting}[language=Lisp]
+    (setf *web-server* (make-instance 'hunchentoot:easy-acceptor 8080))
+    (hunchentoot:start *web-server*)
+    \end{lstlisting}
+    
+    HTML is generated using macros supplied by CL-WHO
+    \begin{lstlisting}
+    (cl-who:with-html-output-to-string ...)
+    \end{lstlisting}
+    
+    Macros are used define page templates
+    \begin{lstlisting}
+    (defmacro define-url-fn ((name) &body body)
+        ...)
+    \end{lstlisting}
+\end{frame}
+
+\begin{frame}{Market stage implementation -- Continuous Double Auctions}
+    \onslide<1->{We have two options to implement a prediction market:}
+    \begin{itemize}
+        \item<2-> Continuous Double Auction (CDA)
+        \item<3-> Market Scoring Rule (MSR)
+    \end{itemize}~\\
+    
+    \onslide<4->{In CDAs, an order book tracks bids and asks
+    \begin{itemize}
+        \item if a bid matches an ask, the trade is executed
+        \item used in traditional stock markets
+    \end{itemize}}
+\end{frame}
+
+\begin{frame}{CDA issues}
+    \onslide<1->{\textbf{Problem:} low liquidity
+    \begin{itemize}
+        \item with few participants, there is no guarantee any bid will match an ask
+    \end{itemize}}~\\
+    
+    \onslide<2->{\textbf{Solution:} an \emph{automated market maker} which always assumes the opposite side of a trade
+    \begin{itemize}
+        \item participants are always able to trade
+        \item \textsc{BUT} the ``house'' is likely to lose money
+    \end{itemize}}
+\end{frame}
+    
+\begin{frame}{Market mechanisms -- Market Scoring Rules}
+    \textbf{Scoring rules} measure the accuracy of probabilistic predictions
+    \begin{itemize}
+        \item we use the \textbf{Logarithmic Market Scoring Rule}~\cite{LMSR}
+    \end{itemize}~\\
+    
+    \begin{equation}
+        C_b (q) = b \cdot \log (1+e^{q/b})
+    \end{equation}~\\
+    
+    where:
+    \begin{itemize}
+        \item $q$ is the quantity (number of shares)
+        \item  $b$ is an arbitrary constant (``liquidity'' parameter)
+        \begin{itemize}
+            \item smaller value $\Rightarrow$ higher price responsiveness
+        \end{itemize}
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Logarithmic Market Scoring Rule}
+    \onslide<1->{An agent wishing to buy $q'-q$ shares of a security pays $C_b(q')-C_b(q)$
+    \begin{itemize}
+        \item suppose $b=10$ and there are 10 outstanding shares
+        \item Alice wishes to buy 7 shares $\Rightarrow$ $q'=17$
+        \item she pays $C_{10}(17)-C_{10}(10)=\$5.54$
+    \end{itemize}}~\\
+    
+    \onslide<2->{Share price is calculated with:
+    \begin{equation}
+        p(q) = \frac{e^{q/b}}{1+e^{q/b}}
+    \end{equation}}~\\
+    
+    \onslide<3->{$p(q)$ is not used to charge users, only to calculate closing price of the market}
+\end{frame}
+
+\begin{frame}{Market stage -- event outcomes}
+    \onslide<1->{The outcome of an event is not binary -- rather, it takes value $\hat{X} \in [0,1]$
+    \begin{itemize}
+        \item corresponds to the proportion that reported that the event occurred
+    \end{itemize}}~\\
+    
+    \onslide<2->{Two nice properties:}
+    \begin{enumerate}
+        \item<3-> each question has well-defined, unambiguous outcome
+        \item<4-> limits the influence a single arbiter can have on the value of a security
+    \end{enumerate}
+\end{frame}
+
+\begin{frame}{Market stage -- trading fees}
+    \onslide<1->{Trading fees imposed on the worst--case loss incurred by an agent
+    \begin{enumerate}
+        \item raises funds to pay the arbiters
+        \item bounds security prices away from 0 and 1
+    \end{enumerate}}~\\
+    
+    \onslide<2->{For \emph{liquidation} transactions, no fees are imposed
+    \begin{itemize}
+        \item users are selling shares they own, or buying back those they have sold
+    \end{itemize}}~\\
+    
+    \onslide<3->{Otherwise, the user is charged
+    \begin{itemize}
+        \item $f p$ for a security bought at price $p$
+        \item $f (1-p)$ for security sold at price $p$
+    \end{itemize}}
+\end{frame}
+
+\begin{frame}{Arbitration stage -- 1/prior mechanism}
+    Arbiters need to be incentivised to act truthfully, since they may hold a stake in the market \\~\\
+    
+    This is achieved using (a modified) 1/prior mechanism:
+    \begin{equation}
+        u(\hat{x}_i, \hat{x}_j) = \begin{cases}
+        k \mu & \text{if } \hat{x}_i = \hat{x}_j = 1 \\
+        k(1 - \mu) & \text{if } \hat{x}_i = \hat{x}_j = 0 \\
+        0 & \text{otherwise}
+        \end{cases}
+    \end{equation}
+    
+    where:
+    \begin{itemize}
+        \item $k$ is an arbitrary constant
+        \item $\mu$ is the prior probability that an agent receives a positive signal
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Parameter tuning}
+    The mechanism uses the following parameters:
+    \begin{itemize}
+        \item $b$ -- liquidity
+        \item $k$ -- to pay the arbiters
+        \item $f$ -- trading fee
+        \item $\delta$ -- ``update strength'', measures how strongly correlated signals are between arbiters
+    \end{itemize}~\\
+    
+    Once the system is running we will need to tune these to suit the market:
+    \begin{itemize}
+        \item number of participants, ambiguity of question, maximum budget of a user, etc.
+    \end{itemize}
+\end{frame}
+
+\section{Project Management}
+
+\begin{frame}{Change of focus}
+    \onslide<1->{Project has changed slightly from that of the research proposal
+    \begin{itemize}
+        \item still looking to incorporate some aspects of it
+    \end{itemize}}~\\
+    
+    \onslide<2->{Much of the coming term will be spent revising for exams
+    \begin{itemize}
+        \item basic functionality not far off working, but needs to work in a web application
+        \item bulk of the project to be done over the summer
+    \end{itemize}}
+\end{frame}
+
+\begin{frame}{Tasks}
+    Once the skeleton code is finished it will need integrating into a \emph{website} \\~\\
+    
+    The next major tasks will be to:
+    \begin{itemize}
+        \item design and implement the database to store information on all users and markets
+        \item creating the pages through which users will interact with the system
+        \item tuning the parameters of the mechanism 
+    \end{itemize}~\\
+    
+    Beyond this is the (stretch) goal of computing relationships between markets
+    \begin{itemize}
+        \item how does a bet placed on one security affect the odds of another?
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Timetable -- out with the old...}
+    \begin{figure}
+        \centering
+        \includegraphics[width=\textwidth]{old-timetable}
+        \caption{Timetable as of the research proposal submission}
+        \label{fig:oldTimetable}
+    \end{figure}
+\end{frame}
+
+\begin{frame}{... in with the new}
+    \begin{figure}
+        \centering
+        \includegraphics[width=\textwidth]{new-timetable}
+        \caption{Revised timetable}
+        \label{fig:newTimetable}
+    \end{figure}
+\end{frame}
+
+\section{Demonstration}
+
+\section{Thank you for listening!}
+\framesubtitle{Any questions?}
+
+\begin{frame}{References}
+    \bibliography{references}
+    \bibliographystyle{abbrv}
+\end{frame}
+
+\end{document}
