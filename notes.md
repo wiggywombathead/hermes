@@ -1,4 +1,4 @@
-# Hermes developer diary
+# Cassie developer diary
 
 ## Setting up environment
 
@@ -155,3 +155,12 @@ was a good exercise.
 
 [CODiPM]: https://arxiv.org/abs/1612.04885
 [random-derangement-algorithm]: https://epubs.siam.org/doi/pdf/10.1137/1.9781611972986.7
+
+## 05/06/2020
+**Important**: name changed from Hermes to Cassie -- more fitting.
+
+## 09/06/2020
+Got Mito set up now and created the tables that will be needed. Pleased with
+the `with-open-database` macro, even if it is very simple. Now I will need to
+implement the ability to create and store bets, display their associated
+information, and eventually be able to trade them between agents.

@@ -2,10 +2,15 @@
 - [ ] Website
   - [ ] Basic pages in Hunchentoot
   - [ ] User interface
+  - [x] User registration
+  - [x] User login
+  - [ ] Make new bets
 
 - [ ] Database
-  - [ ] Set up Mito
-  - [ ] Design database schema
+  - [x] Set up Mito
+  - [x] Design database schema
+  - [x] Clean up connect/disconnect interface?
+    - `with-open-database` macro
 
 - [ ] Trading
   - [x] Implement Logarithmic Market Scoring Rule
@@ -17,4 +22,5 @@
 
 - [ ] Documentation
   - [ ] Development diary notes
-  - [ ] Presentation
+  - [x] Presentation
+  - [ ] Interim Report

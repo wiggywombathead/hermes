@@ -1,58 +1,72 @@
-(defstruct database
-  name
-  tables)
+;;;; Implementation of database
 
-(defstruct table
-  name
-  entries)
+(ql:quickload :mito)
 
-(defun insert (entry table)
-  (push entry table))
+(defun connect-database ()
+  " connect to the database "
+  (mito:connect-toplevel
+	:mysql
+	:database-name "cassie" :username "tom" :password ""))
 
-(defun dump-table (table)
-  " dump contents of table "
-  (dolist (entry table)
-	(format T "~{~a:~10t~a~%~}~%" entry)))
+(defun disconnect-database ()
+  (mito:disconnect-toplevel))
 
-(defun save-database (database)
-  " save database to a file "
-  (with-open-file (out (format NIL "~a.db" (database-name database))
-					   :direction :output		; write out
-					   :if-exists :supersede) 	; overwrite if exists
-	(with-standard-io-syntax
-	  (print database out))))
+;;; Database table definitions
 
-(defun load-database (filename)
-  (with-open-file (in filename)
-	(with-standard-io-syntax
-	  (read in))))
+(mito:deftable user ()
+  ((name :col-type (:varchar 64))
+   (budget :initform 100
+		   :col-type :float)))
 
-(defun make-comparison-expr (field value)
-  `(equal (getf album ,field) ,value))
+(mito:deftable security ()
+  ((query-str :col-type :text)
+   (shares :initform 0
+		   :col-type :integer)
+   (deadline :col-type :datetime)
+   (closing-price :col-type (or :float :null))))
 
-(defun make-comparisons-list (fields)
-  (loop while fields
-		collecting (make-comparison-expr (pop fields) (pop fields))))
+(mito:deftable users-securities ()
+  ((user :col-type user)
+   (security :col-type security)
+   (quantity :col-type :integer)
+   (report :col-type (or :bit :null))))
 
-(defmacro where (&rest clauses)
-  `#'(lambda (x) (and ,@(make-comparisons-list clauses))))
+(defun create-table (table)
+  (mito:ensure-table-exists table))
 
-(defun select (selector-fn database)
-  (remove-if-not selector-fn database))
+(defmacro with-open-database (&body code)
+  " execute CODE without worrying about the connection "
+  `(progn
+	 (connect-database)
+	 (let ((result ,@code))
+	   (disconnect-database)
+	   result)))
 
-;; (ql:quickload :mito)
-;; 
-;; (defun connect ()
-;;   " connect to the database "
-;;   (mito:connect-toplevel
-;; 	:mysql
-;; 	:database-name "cassie" :username "tom" :password ""))
-;; 
-;; (defun disconnect ()
-;;   (mito:disconnect-toplevel))
-;; 
-;; (defclass user ()
-;;   ((username :col-type (:varchar 64)
-;; 			 :init-arg :name
-;; 			 :accessor user-username)
-;;    (funds :col-type :decimal)))
+(defun create-tables ()
+  " create tables for USER, SECURITY, and USERS-SECURITIES "
+  (with-open-database
+	(mapcar #'mito:ensure-table-exists '(user security users-securities))))
+
+(defun alter-table (table)
+  " alter the table defined by TABLE object "
+  (with-open-database
+	; (mito:migration-expression 'user) ; print the generated expression
+	(mito:migrate-table table)))
+
+(defun insert-user (name)
+  (with-open-database
+	(mito:create-dao 'user :name name)))
+
+(defun insert-security (query deadline)
+  (with-open-database
+	(mito:create-dao 'security :query query :deadline deadline)))
+
+(defun user-exists (name)
+  " return T if user with username NAME exists, else NIL "
+  (with-open-database
+	(not (eq NIL (mito:find-dao 'user :name name)))))
+
+(defun get-user-by-name (name)
+  " return the user struct associated with NAME "
+  (with-open-database
+	(mito:find-dao 'user :name name)))

@@ -105,7 +105,7 @@
   (random-pairing arbiters))
 
 (defun one-over-prior (i j security mu k)
-  " pay agents I and J according to the one over prior rule "
+  " pay agent I and J according to the one over prior rule "
   (let ((i-report (gethash security (agent-reports i)))
 		(j-report (gethash security (agent-reports j)))
 		paid)
@@ -123,8 +123,13 @@
 
 (defparameter s
   (create-market
-	"the weather will be nice on 21/04/2020"
-	"2020/04/22-12:00:00"))
+	"the weather will be nice on 21/07/2020"
+	"2020/07/22-12:00:00"))
+
+(defparameter r
+  (create-market
+	"the next president will be a democrat"
+	"2020/11/22-12:00:00"))
 
 (defparameter a (make-agent :name "alice" :budget 100))
 (defparameter b (make-agent :name "bob" :budget 100))
