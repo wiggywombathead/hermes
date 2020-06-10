@@ -12,3 +12,6 @@
 *.snm
 *.toc
 *.vrb
+
+test/
+*.sh

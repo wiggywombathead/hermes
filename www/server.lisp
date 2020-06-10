@@ -22,7 +22,10 @@
 ;;; Server functions
 
 (defun init-server ()
-  (setf *web-server* (make-instance 'easy-acceptor :port *server-port*)))
+  (setf *web-server*
+		(make-instance 'easy-acceptor
+					   :port *server-port*
+					   :document-root #p"/home/tom/compsci/masters/cs907/www/")))
 
 (defun start-server ()
   (start *web-server*))
@@ -50,17 +53,14 @@
 
 			(:body
 			  (:div :id "header"
-					(:img :src "/lambda.jpg"
-						  :alt "Lambda"
-						  :class "logo")
+					(:img :src "kappa.png" :alt "K")
 					(:span :class "strapline" "Predict the future!"))
 
 			  (:div :id "navbar"
 					(:ul
-					  (dolist (page '("home" "about" "login"))
-						(htm
-						  (:li
-							(:a :href page (format T "~a" page)))))
+					  (:li (:a :href "index" "home"))
+					  (:li (:a :href "about" "about"))
+					  (:li (:a :href "login" "login"))
 					  (if *session-user*
 						(htm
 						  (:li
@@ -68,7 +68,23 @@
 
 			  ,@body))))
 
-(defun index ()
+(defmacro define-url-fn ((name) &body body)
+  " creates handler NAME and pushes it to *DISPATCH-TABLE* "
+  `(progn
+	 ;; define the handler
+	 (defun ,name ()
+	   ,@body)
+
+	 ;; add the handler to the dispatch table
+	 (push (create-prefix-dispatcher
+			 ,(format NIL "/~(~a~)" name) ',name)
+		   *dispatch-table*)))
+
+;;; Start the server
+(init-server)
+
+(define-url-fn
+  (index)
   (standard-page
 	(:title "Cassie")
 	(:h1 "Welcome to cassie")
@@ -89,10 +105,9 @@
 		(:div :id "market-maker"
 			  (:form :action "create-market" :method "POST"
 					 :onsubmit (ps-inline
-								 (block ps
-										(when (= (getprop bet_str 'value) "")
-										  (alert "Please enter a bet")
-										  (return-from ps false))))
+								 (when (= (getprop bet_str 'value) "")
+								   (alert "Please enter a bet")
+								   (return false)))
 					 (:table
 					   (:tr
 						 (:td "Bet")
@@ -103,25 +118,6 @@
 						 (:td (:input :type "time" :name "deadline-time")))
 					   (:tr
 						 (:td (:input :type "submit" :value "Create market"))))))))))
-
-;;; Start the server
-(init-server)
-
-;;; Add the index page under URI "/"
-(push (create-prefix-dispatcher (format NIL "/") 'index)
-	  *dispatch-table*)
-
-(defmacro define-url-fn ((name) &body body)
-  " creates handler NAME and pushes it to *DISPATCH-TABLE* "
-  `(progn
-	 ;; define the handler
-	 (defun ,name ()
-	   ,@body)
-
-	 ;; add the handler to the dispatch table
-	 (push (create-prefix-dispatcher
-			 ,(format NIL "/~(~a~)" name) ',name)
-		   *dispatch-table*)))
 
 (define-url-fn
   (about)
@@ -158,20 +154,20 @@
   (let ((username (parameter "username")))
 	(unless (db:user-exists username)
 	  (setf *session-user* (db:insert-user username))))
-  (redirect "/"))
+  (redirect "/index"))
 
 (define-url-fn
   (login-user)
   (let ((username (parameter "username")))
 	(if (db:user-exists username)
 	  (setf *session-user* (db:get-user-by-name username))
-	  (redirect "/login"))
-	(redirect "/")))
+	  (redirect "login")))
+  (redirect "/index"))
 
 (define-url-fn
   (logout-user)
   (setf *session-user* NIL)
-  (redirect "/"))
+  (redirect "/index"))
 
 (define-url-fn
   (create-market)
@@ -209,4 +205,4 @@
 	;; TODO
 	;(db:insert-security bet-str deadline)
 	)
-  (redirect "/"))
+  (redirect "/index"))
