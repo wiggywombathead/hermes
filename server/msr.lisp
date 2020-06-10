@@ -13,6 +13,13 @@
 ;;; We do not use this value to calculate the price an agent must pay to obtain
 ;;; the security -- this is only the price to buy an infinitesimal amount
 
+(defpackage :msr
+  (:use :cl)
+  (:export :share-price
+		   :transaction-cost))
+
+(in-package :msr)
+
 (defconstant +e+ 2.71828182)
 (defconstant +liquidity+ 10)	; TODO: tune this parameter
 
@@ -21,10 +28,10 @@
   calculate the price an agent must pay "
   (/ (exp (/ q +liquidity+)) (1+ (exp (/ q +liquidity+)))))
 
-(defun cost (q)
-  " computes cost for Q shares of security "
+(defun q-price (q)
+  " computes price for Q shares of security "
   (* +liquidity+ (log (1+ (exp (/ q +liquidity+))))))
 
-(defun transaction-cost (q_ q)
-  " compute the price to pay for (Q_ - Q) shares of security "
-  (- (cost q_) (cost q)))
+(defun transaction-cost (q* q)
+  " compute the price to pay for (Q* - Q) shares of security "
+  (- (q-price q*) (q-price q)))

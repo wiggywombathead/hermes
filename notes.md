@@ -164,3 +164,18 @@ Got Mito set up now and created the tables that will be needed. Pleased with
 the `with-open-database` macro, even if it is very simple. Now I will need to
 implement the ability to create and store bets, display their associated
 information, and eventually be able to trade them between agents.
+
+## 10/06/2020
+Thinking ahead to the arbitration stage. Users are incentivised to participate
+here as they will be rewarded monetarily for doing so, but how do we collect
+the user reports? Some ideas:
+- Users say they can act as arbitrator at any point that market is active
+  (problem: need to wait for them all to have reported, what if one user
+  doesn't check in regularly?)
+- Users can see which markets are awaiting arbitration and have the chance to
+  opt-in then. After a certain amount of time (or certain threshold of
+  arbitrators have reported?) we take the reports and proceed as normal.
+
+Regarding the second, what if after a certain time no-one has opted in? Also,
+the idea of a threshold can be manipulated, which is what we want to avoid.
+Leaning towards the second at the moment as it keeps results coming quickly.

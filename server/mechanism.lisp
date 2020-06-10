@@ -4,7 +4,7 @@
 (load "util.lisp")
 
 (defstruct security
-  query-str			; the event as a string
+  bet-str			; the event as a string
   deadline			; the date/time when the event will be realised
   (stakers NIL)		; agents who hold shares of this security
   (arbiters NIL)	; players who hold a stake in the security
@@ -33,8 +33,8 @@
 
 (defconstant +trading-fee+ 0.05)	; TODO: tune this parameter?
 
-(defun create-market (query-str deadline)
-  (make-security :query-str query-str :deadline deadline))
+(defun create-market (bet-str deadline)
+  (make-security :bet-str bet-str :deadline deadline))
 
 (defun trade-security (agent security quantity)
   " buy or sell QUANTITY shares of SECURITY. If QUANTITY > 0 then we are buying

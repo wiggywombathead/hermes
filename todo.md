@@ -5,6 +5,9 @@
   - [x] User registration
   - [x] User login
   - [ ] Make new bets
+    - [x] Only logged-in users
+	- [ ] Initial shares/first dibs
+	- [ ] Create markets under categories
 
 - [ ] Database
   - [x] Set up Mito
@@ -19,6 +22,7 @@
 
 - [ ] Arbitration
   - [ ] 1/prior midpoint mechanism
+  - [ ] How to get arbitrators?
 
 - [ ] Documentation
   - [ ] Development diary notes

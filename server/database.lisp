@@ -1,72 +1,87 @@
 ;;;; Implementation of database
 
 (ql:quickload :mito)
+(ql:quickload :sxql)
+
+(defpackage :db
+  (:use :cl :mito :sxql)
+  (:export :insert-user
+		   :insert-security
+		   :user-exists
+		   :get-user-by-name
+
+		   :user-name
+		   :user-budget
+		   :security-bet-str
+		   :security-shares
+		   :security-deadline
+		   :security-closing-price))
+
+(in-package :db)
 
 (defun connect-database ()
   " connect to the database "
-  (mito:connect-toplevel
+  (connect-toplevel
 	:mysql
 	:database-name "cassie" :username "tom" :password ""))
 
 (defun disconnect-database ()
-  (mito:disconnect-toplevel))
+  (disconnect-toplevel))
 
 ;;; Database table definitions
 
-(mito:deftable user ()
-  ((name :col-type (:varchar 64))
-   (budget :initform 100
-		   :col-type :float)))
+(deftable user ()
+		  ((name :col-type (:varchar 64))
+		   (budget :initform 100
+				   :col-type :float)))
 
-(mito:deftable security ()
-  ((query-str :col-type :text)
-   (shares :initform 0
-		   :col-type :integer)
-   (deadline :col-type :datetime)
-   (closing-price :col-type (or :float :null))))
+(deftable security ()
+		  ((bet-str :col-type :text)
+		   (shares :initform 0
+				   :col-type :integer)
+		   (deadline :col-type :datetime)
+		   (closing-price :col-type (or :float :null))))
 
-(mito:deftable users-securities ()
-  ((user :col-type user)
-   (security :col-type security)
-   (quantity :col-type :integer)
-   (report :col-type (or :bit :null))))
-
-(defun create-table (table)
-  (mito:ensure-table-exists table))
+(deftable users-securities ()
+		  ((user :col-type user)
+		   (security :col-type security)
+		   (quantity :col-type :integer)
+		   (report :col-type (or :bit :null))))
 
 (defmacro with-open-database (&body code)
   " execute CODE without worrying about the connection "
   `(progn
 	 (connect-database)
-	 (let ((result ,@code))
+	 (let ((result (progn ,@code)))
 	   (disconnect-database)
 	   result)))
 
 (defun create-tables ()
   " create tables for USER, SECURITY, and USERS-SECURITIES "
   (with-open-database
-	(mapcar #'mito:ensure-table-exists '(user security users-securities))))
+	(mapcar #'ensure-table-exists '(user security users-securities))))
 
-(defun alter-table (table)
-  " alter the table defined by TABLE object "
+(defun update-table-definition (table)
+  " update the table defined by class/struct TABLE "
   (with-open-database
-	; (mito:migration-expression 'user) ; print the generated expression
-	(mito:migrate-table table)))
+	; (migration-expression 'user) ; print the generated expression
+	(migrate-table table)))
 
 (defun insert-user (name)
   (with-open-database
-	(mito:create-dao 'user :name name)))
+	(create-dao 'user :name name)))
 
-(defun insert-security (query deadline)
+(defun insert-security (bet-str deadline)
   (with-open-database
-	(mito:create-dao 'security :query query :deadline deadline)))
+	(format T "inserting <~a,~a>~%" bet-str deadline)
+	(create-dao 'security :bet-str bet-str :deadline deadline)))
 
 (defun user-exists (name)
   " return T if user with username NAME exists, else NIL "
   (with-open-database
-	(not (eq NIL (mito:find-dao 'user :name name)))))
+	(not (eq NIL (find-dao 'user :name name)))))
 
 (defun get-user-by-name (name)
   " return the user struct associated with NAME "
   (with-open-database
-	(mito:find-dao 'user :name name)))
+	(find-dao 'user :name name)))
