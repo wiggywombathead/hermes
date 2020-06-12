@@ -15,7 +15,10 @@
 		   :security-bet-str
 		   :security-shares
 		   :security-deadline
-		   :security-closing-price))
+		   :security-closing-price
+
+		   :update-budget
+		   :update-budget-by-name))
 
 (in-package :db)
 
@@ -33,14 +36,14 @@
 (deftable user ()
 		  ((name :col-type (:varchar 64))
 		   (budget :initform 100
-				   :col-type :float)))
+				   :col-type :double)))
 
 (deftable security ()
 		  ((bet-str :col-type :text)
 		   (shares :initform 0
 				   :col-type :integer)
 		   (deadline :col-type :datetime)
-		   (closing-price :col-type (or :float :null))))
+		   (closing-price :col-type (or :double :null))))
 
 (deftable users-securities ()
 		  ((user :col-type user)
@@ -85,3 +88,12 @@
   " return the user struct associated with NAME "
   (with-open-database
 	(find-dao 'user :name name)))
+
+(defun update-budget (usr new-budget)
+  (setf (slot-value usr 'budget) new-budget)
+  (with-open-database
+	(save-dao usr)))
+
+(defun update-budget-by-name (name new-budget)
+  (update-budget (get-user-by-name name) new-budget))
+

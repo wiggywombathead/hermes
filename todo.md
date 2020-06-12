@@ -32,3 +32,6 @@
 
 - [ ] General fixes
   - [ ] Get rid of annoying `returning from unknown block nilBlock warning
+  - [ ] Make macro for Parenscript ensuring fields are nonempty
+  - [ ] Find a way to remove `d0` from LISP doubles when inserting into
+	database

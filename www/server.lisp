@@ -87,11 +87,25 @@
 
 	 ;; add the handler to the dispatch table
 	 (push (create-prefix-dispatcher
-			 ,(format NIL "/~(~a~)" name) ',name)
+			 ,(format NIL "/~(~A~)" name) ',name)
 		   *dispatch-table*)))
 
 ;;; Start the server
 (init-server)
+
+#| TODO: make this macro work
+(defun make-nonempty-check (field)
+  `(equal (getprop ,field value) ""))
+
+(defun make-nonempty-list (fields)
+  (loop while fields
+		collecting (make-nonempty-check (pop fields))))
+
+(defmacro js-ensure-nonempty (&rest fields)
+  `(ps-inline
+	(when (and ,@(make-nonempty-list fields))
+	  (return false))))
+|#
 
 (define-url-fn
   (index)
@@ -101,9 +115,9 @@
 	(:p "cassie is a flexible prediction market where you can bet on the
 		outcome of future events!")
 
-	(:h2 (format T "~a"
+	(:h2 (format T "~A"
 				 (if *session-user*
-				   (format NIL "Hello ~a! Funds: ~$"
+				   (format NIL "Hello ~A! Funds: ~$"
 						   (db:user-name *session-user*)
 						   (db:user-budget *session-user*))
 				   "")))
@@ -184,7 +198,7 @@
 (define-url-fn
   (create-market)
   (let ((bet-str (parameter "bet_str"))
-		(deadline (format NIL "~a ~a"
+		(deadline (format NIL "~A ~A"
 						  (parameter "deadline_date")
 						  (parameter "deadline_time")))
 		(share-price (msr:share-price 0)))
@@ -192,6 +206,10 @@
 	  (:title "Create Market")
 	  (:h1 "Create Position")
 	  (:form :action "first-dibs" :method "POST"
+			 :onsubmit (ps-inline
+						 (when (= (getprop shares 'value) "")
+						   (alert "Quantity cannot be empty")
+						   (return false)))
 			 (:table
 			   (:tr
 				 (:td "Market")
@@ -205,8 +223,8 @@
 				 (:td "Share price")
 				 (:td (format T "~$" share-price)))
 			   (:tr
-				 (:td "Initial Position:")
-				 (:td (:input :type "number" :min 1 :name "shares"))
+				 (:td "Initial Position")
+				 (:td (:input :type "number" :min 1 :value 1 :name "shares"))
 				 (:td "shares"))
 			   (:tr
 				 (:td "Exposure")
@@ -223,10 +241,16 @@
 	(let* ((bet-str (parameter "bet_str"))
 		   (deadline (parameter "deadline"))
 		   (shares (parse-integer (parameter "shares")))
+		   (paid (msr:transaction-cost shares 0))
 		   (budget (db:user-budget *session-user*))
-		   (paid (msr:transaction-cost shares 0)))
+		  	
+		   ;; FIXME: UGLY!!! find a way to remove `d0' from LISP double
+		   (new-budget (float (rational (- budget paid)))))
+	  (htm
+	  (db:update-budget *session-user* new-budget)
+	  (db:insert-security bet-str deadline)
 	  (htm
 		(:p (format T "You have paid ~$ for ~D shares of: \"~A\", which expires
 					on ~A. Your remaining budget is ~$"
-					paid shares bet-str deadline (- budget paid))))
-		(db:insert-security bet-str deadline))))
+					paid shares bet-str deadline new-budget))
+		(:a :href "/index" :class "button" "Return to dashboard"))))))
