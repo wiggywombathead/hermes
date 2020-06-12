@@ -47,8 +47,8 @@
 		 (buying-p (> quantity 0))
 		 (selling-p (not buying-p))
 
-		 (cost (transaction-cost (+ quantity outstanding) outstanding))
-		 (price (share-price outstanding))
+		 (cost (msr:transaction-cost (+ quantity outstanding) outstanding))
+		 (price (msr:share-price outstanding))
 		 fee
 		 total-fee
 		 total-price)

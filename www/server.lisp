@@ -1,10 +1,10 @@
 ;;;; Webserver on which to host the prediction market
 
 ;; load the required packages
-(mapcar #'ql:quickload '(:hunchentoot :cl-who :parenscript))
+(mapcar #'ql:quickload '(:hunchentoot :cl-who :parenscript :smackjack))
 
 (defpackage :srv
-  (:use :cl :cl-who :hunchentoot :parenscript)
+  (:use :cl :cl-who :hunchentoot :parenscript :smackjack)
   (:export :start-server
 		   :stop-server))
 
@@ -19,13 +19,21 @@
 
 (defparameter *session-user* NIL)
 
+(defparameter *ajax-processor* NIL)
+
 ;;; Server functions
 
 (defun init-server ()
   (setf *web-server*
 		(make-instance 'easy-acceptor
+					   :name 'cassie
 					   :port *server-port*
-					   :document-root #p"/home/tom/compsci/masters/cs907/www/")))
+					   :document-root #p"/home/tom/compsci/masters/cs907/www/"))
+
+  (setf *ajax-processor*
+		(make-instance 'ajax-processor :server-uri "/ajax")))
+
+  ;(push (create-ajax-dispatcher *ajax-processor*) *dispatch-table*)) 
 
 (defun start-server ()
   (start *web-server*))
@@ -44,16 +52,18 @@
 			:lang "en"
 
 			(:head
+			  (:title ,title)
+
 			  (:meta :http-equiv "Content-Type"
 					 :content "text/html;charset=utf-8")
-			  (:title ,title)
+
 			  (:link :type "text/css"
 					 :rel "stylesheet"
 					 :href "/style.css"))
 
 			(:body
 			  (:div :id "header"
-					(:img :src "kappa.png" :alt "K")
+					(:img :src "/kappa.png" :alt "K")
 					(:span :class "strapline" "Predict the future!"))
 
 			  (:div :id "navbar"
@@ -90,6 +100,7 @@
 	(:h1 "Welcome to cassie")
 	(:p "cassie is a flexible prediction market where you can bet on the
 		outcome of future events!")
+
 	(:h2 (format T "~a"
 				 (if *session-user*
 				   (format NIL "Hello ~a! Funds: ~$"
@@ -105,8 +116,9 @@
 		(:div :id "market-maker"
 			  (:form :action "create-market" :method "POST"
 					 :onsubmit (ps-inline
-								 (when (= (getprop bet_str 'value) "")
-								   (alert "Please enter a bet")
+								 (when (or (= (getprop bet_str 'value) "")
+										   (= (getprop deadline_date 'value) ""))
+								   (alert "Please fill in all fields")
 								   (return false)))
 					 (:table
 					   (:tr
@@ -114,8 +126,8 @@
 						 (:td (:input :type "text" :name "bet_str")))
 					   (:tr
 						 (:td "Deadline")
-						 (:td (:input :type "date" :name "deadline-date"))
-						 (:td (:input :type "time" :name "deadline-time")))
+						 (:td (:input :type "date" :name "deadline_date"))
+						 (:td (:input :type "time" :name "deadline_time")))
 					   (:tr
 						 (:td (:input :type "submit" :value "Create market"))))))))))
 
@@ -161,7 +173,7 @@
   (let ((username (parameter "username")))
 	(if (db:user-exists username)
 	  (setf *session-user* (db:get-user-by-name username))
-	  (redirect "login")))
+	  (redirect "/login")))
   (redirect "/index"))
 
 (define-url-fn
@@ -173,8 +185,8 @@
   (create-market)
   (let ((bet-str (parameter "bet_str"))
 		(deadline (format NIL "~a ~a"
-						  (parameter "deadline-date")
-						  (parameter "deadline-time")))
+						  (parameter "deadline_date")
+						  (parameter "deadline_time")))
 		(share-price (msr:share-price 0)))
 	(standard-page
 	  (:title "Create Market")
@@ -183,26 +195,38 @@
 			 (:table
 			   (:tr
 				 (:td "Market")
-				 (:td (fmt "~a" bet-str)))
+				 (:td (fmt "~A" bet-str)
+					  (:input :type :hidden :name "bet_str" :value bet-str)))
 			   (:tr
 				 (:td "Deadline")
-				 (:td (fmt "~a" deadline)))
+				 (:td (fmt "~A" deadline)
+					  (:input :type :hidden :name "deadline" :value deadline)))
 			   (:tr
 				 (:td "Share price")
 				 (:td (format T "~$" share-price)))
 			   (:tr
 				 (:td "Initial Position:")
-				 (:td (:input :type "text" :name "shares"))
+				 (:td (:input :type "number" :min 1 :name "shares"))
 				 (:td "shares"))
+			   (:tr
+				 (:td "Exposure")
+				 (:td (:em "TODO")))
 			   (:tr
 				 (:td :colspan 3
 					  (:input :type "submit" :value "Buy shares"))))))))
 
 (define-url-fn
   (first-dibs)
-  (let ((shares (parameter "shares")))
-	;; work out pricing things
-	;; TODO
-	;(db:insert-security bet-str deadline)
-	)
-  (redirect "/index"))
+  (standard-page
+	(:title "Transaction")
+	(:h1 "Transaction successful")
+	(let* ((bet-str (parameter "bet_str"))
+		   (deadline (parameter "deadline"))
+		   (shares (parse-integer (parameter "shares")))
+		   (budget (db:user-budget *session-user*))
+		   (paid (msr:transaction-cost shares 0)))
+	  (htm
+		(:p (format T "You have paid ~$ for ~D shares of: \"~A\", which expires
+					on ~A. Your remaining budget is ~$"
+					paid shares bet-str deadline (- budget paid))))
+		(db:insert-security bet-str deadline))))

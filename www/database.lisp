@@ -73,7 +73,7 @@
 
 (defun insert-security (bet-str deadline)
   (with-open-database
-	(format T "inserting <~a,~a>~%" bet-str deadline)
+	;(format T "inserting security [~A,~A]~%" bet-str deadline)
 	(create-dao 'security :bet-str bet-str :deadline deadline)))
 
 (defun user-exists (name)

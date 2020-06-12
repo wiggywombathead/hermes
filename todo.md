@@ -8,6 +8,7 @@
     - [x] Only logged-in users
 	- [ ] Initial shares/first dibs
 	- [ ] Create markets under categories
+	- [ ] Remember to implement trading fees
 
 - [ ] Database
   - [x] Set up Mito
@@ -28,3 +29,6 @@
   - [ ] Development diary notes
   - [x] Presentation
   - [ ] Interim Report
+
+- [ ] General fixes
+  - [ ] Get rid of annoying `returning from unknown block nilBlock warning
