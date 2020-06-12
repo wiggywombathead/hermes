@@ -1,7 +1,7 @@
 ;;;; Webserver on which to host the prediction market
 
 ;; load the required packages
-(mapcar #'ql:quickload '(:hunchentoot :cl-who :parenscript :smackjack))
+(mapcar #'ql:quickload '(:cl-who :hunchentoot :parenscript :smackjack))
 
 (defpackage :srv
   (:use :cl :cl-who :hunchentoot :parenscript :smackjack)
@@ -243,14 +243,13 @@
 		   (shares (parse-integer (parameter "shares")))
 		   (paid (msr:transaction-cost shares 0))
 		   (budget (db:user-budget *session-user*))
-		  	
+
 		   ;; FIXME: UGLY!!! find a way to remove `d0' from LISP double
 		   (new-budget (float (rational (- budget paid)))))
-	  (htm
 	  (db:update-budget *session-user* new-budget)
 	  (db:insert-security bet-str deadline)
 	  (htm
 		(:p (format T "You have paid ~$ for ~D shares of: \"~A\", which expires
 					on ~A. Your remaining budget is ~$"
 					paid shares bet-str deadline new-budget))
-		(:a :href "/index" :class "button" "Return to dashboard"))))))
+		(:a :href "/index" :class "button" "Return to dashboard")))))
