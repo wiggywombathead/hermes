@@ -63,7 +63,7 @@
 
 			(:body
 			  (:div :id "header"
-					(:img :src "/kappa.png" :alt "K")
+					(:img :src "img/kappa.png" :alt "K")
 					(:span :class "strapline" "Predict the future!"))
 
 			  (:div :id "navbar"
@@ -93,19 +93,20 @@
 ;;; Start the server
 (init-server)
 
-#| TODO: make this macro work
 (defun make-nonempty-check (field)
-  `(equal (getprop ,field value) ""))
+  `(equal (getprop ,field 'value) ""))
 
 (defun make-nonempty-list (fields)
   (loop while fields
 		collecting (make-nonempty-check (pop fields))))
 
-(defmacro js-ensure-nonempty (&rest fields)
+(defmacro js-ensure-nonempty (msg &rest fields)
   `(ps-inline
-	(when (and ,@(make-nonempty-list fields))
-	  (return false))))
-|#
+	 (when (or ,@(make-nonempty-list fields))
+	   (if (equal ,msg "")
+		 (alert "Please fill in all required fields")
+		 (alert ,msg))
+	   (return false))))
 
 (define-url-fn
   (index)
@@ -129,11 +130,7 @@
 	  (htm
 		(:div :id "market-maker"
 			  (:form :action "create-market" :method "POST"
-					 :onsubmit (ps-inline
-								 (when (or (= (getprop bet_str 'value) "")
-										   (= (getprop deadline_date 'value) ""))
-								   (alert "Please fill in all fields")
-								   (return false)))
+					 :onsubmit (js-ensure-nonempty "" bet_str deadline_date)
 					 (:table
 					   (:tr
 						 (:td "Bet")
