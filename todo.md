@@ -1,12 +1,12 @@
 # TODO
 - [ ] Website
-  - [ ] Basic pages in Hunchentoot
+  - [x] Basic pages in Hunchentoot
   - [ ] User interface
   - [x] User registration
   - [x] User login
   - [ ] Make new bets
     - [x] Only logged-in users
-	- [ ] Initial shares/first dibs
+	- [x] Initial shares/first dibs
 	- [ ] Create markets under categories
 	- [ ] Remember to implement trading fees
 
@@ -15,11 +15,13 @@
   - [x] Design database schema
   - [x] Clean up connect/disconnect interface?
     - `with-open-database` macro
+  - [ ] Trade histories table
 
 - [ ] Trading
   - [x] Implement Logarithmic Market Scoring Rule
-  - [ ] Ability to trade between agents
+  - [x] Ability to trade between agents
   - [ ] Trading fees
+    - [ ] Pay to central "bank"
 
 - [ ] Arbitration
   - [ ] 1/prior midpoint mechanism
@@ -32,6 +34,10 @@
 
 - [ ] General fixes
   - [ ] Get rid of annoying `returning from unknown block nilBlock warning
-  - [ ] Make macro for Parenscript ensuring fields are nonempty
-  - [ ] Find a way to remove `d0` from LISP doubles when inserting into
-	database
+  - [x] Make macro for Parenscript ensuring fields are nonempty
+  - [ ] Find a (better?) way to remove `d0` from LISP doubles when inserting
+	into database
+  - [x] Consider merging `first-dibs` and `buy-or-sell-security` into one
+	function (i.e. `trade-security` uses same backend as `create-market`)
+	- No point: too different
+  - [ ] Clean up deadline formatting

@@ -1,0 +1,47 @@
+body {
+	font-family: "Consolas";
+	font-size: 12pt;
+}
+
+#navbar {
+	margin: 0
+}
+
+#navbar ul {
+	list-style-type: none;
+	margin: 0;
+	padding: 0;
+	overflow: hidden;
+	background-color: #f3f3f3;
+	display: inline-block;
+}
+
+#navbar li {
+	float: left;
+}
+
+#navbar li a, img {
+	display: block;
+	color: black;
+	text-align: center;
+	padding: 8px 10px;
+	text-decoration: none;
+	height: 1em;
+}
+
+#navbar li a:hover {
+	background-color: #d3d3d3;
+}
+
+th, td {
+	text-align: left;
+	padding: 5px;
+}
+
+th.price, td.price {
+	text-align: center
+}
+
+table.markets tr:nth-child(even) {
+	background-color: #f2f2f2;
+}

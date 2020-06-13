@@ -5,20 +5,44 @@
 
 (defpackage :db
   (:use :cl :mito :sxql)
-  (:export :insert-user
+  (:export :create-tables
+		   :insert-user
 		   :insert-security
-		   :user-exists
+		   :insert-user-security
+
+		   ;; user stuff
+		   :get-users
+		   :user-exists?
+		   :holds-shares?
 		   :get-user-by-name
 
+		   ;; security stuff
+		   :get-securities
+		   :get-security-by-id
+
+		   ;; portfolio stuff
+		   :add-portfolio-entry
+		   :update-portfolio
+		   :get-current-position
+
+		   ;; class accessors
+		   :user-id
 		   :user-name
 		   :user-budget
-		   :security-bet-str
+
+		   :security-id
+		   :security-bet
 		   :security-shares
 		   :security-deadline
 		   :security-closing-price
 
+		   :user-security-shares
+
+		   ;; update functions
 		   :update-budget
-		   :update-budget-by-name))
+		   :update-budget-by-name
+		   :update-security-shares
+		   :update-portfolio))
 
 (in-package :db)
 
@@ -39,17 +63,24 @@
 				   :col-type :double)))
 
 (deftable security ()
-		  ((bet-str :col-type :text)
+		  ((bet :col-type :text)
 		   (shares :initform 0
 				   :col-type :integer)
 		   (deadline :col-type :datetime)
 		   (closing-price :col-type (or :double :null))))
 
-(deftable users-securities ()
+(deftable user-security ()
 		  ((user :col-type user)
 		   (security :col-type security)
-		   (quantity :col-type :integer)
+		   (shares :col-type :integer
+				   :initform 0)
 		   (report :col-type (or :bit :null))))
+
+(defun user-id (user)
+  (object-id user))
+
+(defun security-id (security)
+  (object-id security))
 
 (defmacro with-open-database (&body code)
   " execute CODE without worrying about the connection "
@@ -60,9 +91,13 @@
 	   result)))
 
 (defun create-tables ()
-  " create tables for USER, SECURITY, and USERS-SECURITIES "
+  " create tables for USER, SECURITY, and USER-SECURITY "
   (with-open-database
-	(mapcar #'ensure-table-exists '(user security users-securities))))
+	(mapcar #'ensure-table-exists '(user security user-security))))
+
+(defun clear-tables ()
+  (with-open-database
+	(mapcar #'delete-by-values '(user security user-security))))
 
 (defun update-table-definition (table)
   " update the table defined by class/struct TABLE "
@@ -74,15 +109,23 @@
   (with-open-database
 	(create-dao 'user :name name)))
 
-(defun insert-security (bet-str deadline)
+(defun insert-security (bet deadline shares)
   (with-open-database
-	;(format T "inserting security [~A,~A]~%" bet-str deadline)
-	(create-dao 'security :bet-str bet-str :deadline deadline)))
+	;(format T "inserting security [~A,~A]~%" bet deadline)
+	(create-dao 'security :bet bet :deadline deadline :shares shares)))
 
-(defun user-exists (name)
+(defun user-exists? (name)
   " return T if user with username NAME exists, else NIL "
   (with-open-database
 	(not (eq NIL (find-dao 'user :name name)))))
+
+(defun holds-shares? (user security)
+  (with-open-database
+	(not (eq NIL (find-dao 'user-security :user user :security security)))))
+
+(defun get-users ()
+  (with-open-database
+	(select-dao 'user)))
 
 (defun get-user-by-name (name)
   " return the user struct associated with NAME "
@@ -97,3 +140,34 @@
 (defun update-budget-by-name (name new-budget)
   (update-budget (get-user-by-name name) new-budget))
 
+(defun get-securities ()
+  (with-open-database
+	(select-dao 'security)))
+
+(defun get-security-by-id (id)
+  (with-open-database
+	(find-dao 'security :id id)))
+
+(defun update-security-shares (security new-quantity)
+  (setf (slot-value security 'shares) new-quantity)
+  (with-open-database
+	(save-dao security)))
+
+(defun insert-user-security (user security &optional shares)
+  (with-open-database
+	(create-dao 'user-security :user user :security security :shares shares)))
+
+(defun add-portfolio-entry (user security shares)
+  (insert-user-security user security shares))
+
+(defun update-portfolio (user security shares)
+  (with-open-database
+	(let* ((portfolio-entry (find-dao 'user-security :user user :security security))
+		   (old-quantity (user-security-shares portfolio-entry)))
+	  (setf (slot-value portfolio-entry 'shares) (+ shares old-quantity))
+	  (save-dao portfolio-entry))))
+
+(defun get-current-position (user security)
+  " returns the number of shares USER currently holds of SECURITY "
+  (with-open-database
+	(user-security-shares (find-dao 'user-security :user user :security security))))
