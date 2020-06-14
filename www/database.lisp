@@ -43,9 +43,13 @@
 		   :update-budget
 		   :update-budget-by-name
 		   :update-security-shares
-		   :update-portfolio))
+		   :update-portfolio
+
+		   :pay-bank))
 
 (in-package :db)
+
+(defconstant *banker-name* "bank")
 
 (defun connect-database ()
   " connect to the database "
@@ -91,10 +95,15 @@
 	   (disconnect-database)
 	   result)))
 
+(defun set-banker ()
+  (setf *banker* (get-user-by-name *banker-name*)))
+
 (defun create-tables ()
   " create tables for USER, SECURITY, and USER-SECURITY "
   (with-open-database
-	(mapcar #'ensure-table-exists '(user security user-security))))
+	(mapcar #'ensure-table-exists '(user security user-security)))
+  (insert-user *banker-name*)
+  (set-banker))
 
 (defun clear-tables ()
   (with-open-database
@@ -184,3 +193,8 @@
 	  (if position
 		(user-security-shares position)
 		0))))
+
+(defun pay-bank (user amount)
+  " transfer AMOUNT from USER's account to the bank "
+  ;; TODO
+  )

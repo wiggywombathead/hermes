@@ -21,6 +21,12 @@
 
 (defparameter *ajax-processor* NIL)
 
+;; charge an extra:
+;;	- fp for buys
+;;  - f(1-p) for sells
+;;	- 0 for liquidity/
+(defconstant +trading-fee+ 0.05)
+
 ;;; Server functions
 
 (defun init-server ()
@@ -90,9 +96,6 @@
 			 ,(format NIL "/~(~A~)" name) ',name)
 		   *dispatch-table*)))
 
-;;; Start the server
-(init-server)
-
 ;; TODO: point / to /index
 
 (defun make-nonempty-check (field)
@@ -109,6 +112,9 @@
 		 (alert "Please fill in all required fields")
 		 (alert ,msg))
 	   (return false))))
+
+;;; Start the server
+(init-server)
 
 (define-url-fn
   (index)
@@ -216,6 +222,7 @@
 						  (parameter "deadline_date")
 						  (parameter "deadline_time")))
 		(share-price (msr:share-price 0)))
+
 	(standard-page
 	  (:title "Create Market")
 	  (:h1 "Create Position")
@@ -244,12 +251,6 @@
 				 (:td :colspan 3
 					  (:input :type "submit" :value "Buy shares"))))))))
 
-;; charge an extra:
-;;	- fp for buys
-;;  - f(1-p) for sells
-;;	- 0 for liquidity/
-(defconstant +trading-fee+ 0.05)
-
 (define-url-fn
   (first-dibs)
   (standard-page
@@ -275,6 +276,7 @@
 	  (setf new-budget (- budget paid))
 
 	  (db:update-budget *session-user* (- paid))
+	  (db:pay-bank paid)
 	  
 	  ;; TODO: update the bank budget
 
@@ -316,9 +318,8 @@
 		   (share-price (msr:share-price outstanding-shares))
 		   current-position)
 
-	  (setf current-position (if (db:holds-shares? *session-user* security)
-							   (db:get-current-position *session-user* security)
-							   0))
+	  (setf current-position (db:get-current-position *session-user* security))
+
 	  (htm
 		(:h1 "Trade")
 		(:form :action "buy-or-sell-security" :method "POST"
@@ -359,20 +360,20 @@
 	(:title "Transaction")
 	(:h1 "Transaction successful")
 
-	(let* ((id (parameter "bet-id"))
-		   (shares (parse-integer (parameter "shares")))
-		   (previous-outstanding (parse-integer (parameter "previous-outstanding")))
-		   (budget (db:user-budget *session-user*))
-		   security
-		   buying-p
-		   selling-p
-		   new-outstanding
-		   new-share-price
-		   total-price
-		   current-position
-		   fee
-		   paid
-		   new-budget)
+	(let ((id (parameter "bet-id"))
+		  (shares (parse-integer (parameter "shares")))
+		  (previous-outstanding (parse-integer (parameter "previous-outstanding")))
+		  (budget (db:user-budget *session-user*))
+		  security
+		  buying-p
+		  selling-p
+		  new-outstanding
+		  new-share-price
+		  total-price
+		  current-position
+		  fee
+		  paid
+		  new-budget)
 
 	  ;; get the security object
 	  (setf security (db:get-security-by-id id))
@@ -385,12 +386,14 @@
 
 	  ;; total price to move number of shares from previous-outstanding to
 	  ;; new-outstanding
-	  (setf total-price (msr:transaction-cost new-outstanding previous-outstanding))
+	  (setf total-price
+			(msr:transaction-cost new-outstanding previous-outstanding))
 
 	  ;; buying this number of shares moves the price to new-share-price
 	  (setf new-share-price (msr:share-price new-outstanding))
 
-	  (setf current-position (db:get-current-position *session-user* security))
+	  (setf current-position
+			(db:get-current-position *session-user* security))
 
 	  ;; set fee to 0 if liquidation transaction, otherwise fp or f(1-p)
 	  (setf fee (if (not (= 0 current-position))

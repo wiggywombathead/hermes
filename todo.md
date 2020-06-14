@@ -9,6 +9,7 @@
 	- [x] Initial shares/first dibs
 	- [ ] Create markets under categories
 	- [x] Remember to implement trading fees
+  - [ ] Find a way to point "/" to "/index" (hunchentoot)
 
 - [ ] Database
   - [x] Set up Mito
@@ -24,6 +25,7 @@
     - [ ] Pay to central "bank"
   - [ ] Where does the money go? Create entry in `user` table for the bank, and
 	use the funds transferred here to pay winnings?
+	- [ ] Finish `pay-banker` function
   - [ ] What happens when the price approaches 0/1? Test.
 
 - [ ] Arbitration
