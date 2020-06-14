@@ -24,6 +24,7 @@
 		   :add-portfolio-entry
 		   :update-portfolio
 		   :get-current-position
+		   :user-security-exists?
 
 		   ;; class accessors
 		   :user-id
@@ -120,8 +121,9 @@
 	(not (eq NIL (find-dao 'user :name name)))))
 
 (defun holds-shares? (user security)
-  (with-open-database
-	(not (eq NIL (find-dao 'user-security :user user :security security)))))
+  " return T if user-security entry referring to USER and SECURITY exists and
+  the quantity is not equal to 0"
+  (not (= 0 (get-current-position user security))))
 
 (defun get-users ()
   (with-open-database
@@ -132,10 +134,13 @@
   (with-open-database
 	(find-dao 'user :name name)))
 
-(defun update-budget (usr new-budget)
-  (setf (slot-value usr 'budget) new-budget)
-  (with-open-database
-	(save-dao usr)))
+(defun update-budget (user amount)
+  " increase budget of USER by AMOUNT "
+  (let ((current-budget (user-budget user)))
+	;; TODO: better way to remove `d0` suffix for storing in database?
+	(setf (slot-value user 'budget) (float (rational (+ current-budget amount))))
+	(with-open-database
+	  (save-dao user))))
 
 (defun update-budget-by-name (name new-budget)
   (update-budget (get-user-by-name name) new-budget))
@@ -157,10 +162,15 @@
   (with-open-database
 	(create-dao 'user-security :user user :security security :shares shares)))
 
+(defun user-security-exists? (user security)
+  (with-open-database
+	(find-dao 'user-security :user user :security security)))
+
 (defun add-portfolio-entry (user security shares)
   (insert-user-security user security shares))
 
 (defun update-portfolio (user security shares)
+  " sets the number of shares USER holds of SECURITY to SHARES "
   (with-open-database
 	(let* ((portfolio-entry (find-dao 'user-security :user user :security security))
 		   (old-quantity (user-security-shares portfolio-entry)))
@@ -170,4 +180,7 @@
 (defun get-current-position (user security)
   " returns the number of shares USER currently holds of SECURITY "
   (with-open-database
-	(user-security-shares (find-dao 'user-security :user user :security security))))
+	(let ((position (find-dao 'user-security :user user :security security)))
+	  (if position
+		(user-security-shares position)
+		0))))

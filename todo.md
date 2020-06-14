@@ -8,7 +8,7 @@
     - [x] Only logged-in users
 	- [x] Initial shares/first dibs
 	- [ ] Create markets under categories
-	- [ ] Remember to implement trading fees
+	- [x] Remember to implement trading fees
 
 - [ ] Database
   - [x] Set up Mito
@@ -22,6 +22,9 @@
   - [x] Ability to trade between agents
   - [ ] Trading fees
     - [ ] Pay to central "bank"
+  - [ ] Where does the money go? Create entry in `user` table for the bank, and
+	use the funds transferred here to pay winnings?
+  - [ ] What happens when the price approaches 0/1? Test.
 
 - [ ] Arbitration
   - [ ] 1/prior midpoint mechanism
@@ -40,4 +43,4 @@
   - [x] Consider merging `first-dibs` and `buy-or-sell-security` into one
 	function (i.e. `trade-security` uses same backend as `create-market`)
 	- No point: too different
-  - [ ] Clean up deadline formatting
+  - [ ] Clean up date/deadline formatting

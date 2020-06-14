@@ -93,6 +93,8 @@
 ;;; Start the server
 (init-server)
 
+;; TODO: point / to /index
+
 (defun make-nonempty-check (field)
   `(equal (getprop ,field 'value) ""))
 
@@ -242,6 +244,12 @@
 				 (:td :colspan 3
 					  (:input :type "submit" :value "Buy shares"))))))))
 
+;; charge an extra:
+;;	- fp for buys
+;;  - f(1-p) for sells
+;;	- 0 for liquidity/
+(defconstant +trading-fee+ 0.05)
+
 (define-url-fn
   (first-dibs)
   (standard-page
@@ -252,15 +260,23 @@
 		  (deadline (parameter "deadline"))
 		  (shares (parse-integer (parameter "shares")))
 		  (budget (db:user-budget *session-user*))
+		  total-price
+		  new-share-price
+		  fee
 		  paid
 		  new-budget)
 
-	  (setf paid (msr:transaction-cost shares 0))
+	  (setf total-price (msr:transaction-cost shares 0))
+	  (setf new-share-price (msr:share-price shares))
 
-	  ;; FIXME: UGLY!!! find a way to remove `d0' from LISP double
-	  (setf new-budget (float (rational (- budget paid))))
+	  (setf fee (* +trading-fee+ new-share-price))
+	  (setf paid (+ total-price fee))
 
-	  (db:update-budget *session-user* new-budget)
+	  (setf new-budget (- budget paid))
+
+	  (db:update-budget *session-user* (- paid))
+	  
+	  ;; TODO: update the bank budget
 
 	  ;; insert the new security and record that USER now owns SECURITY
 	  (let ((inserted-security (db:insert-security bet deadline shares)))
@@ -279,8 +295,11 @@
 			(:td "Shares bought")
 			(:td (fmt "~D" shares)))
 		  (:tr
-			(:td "Paid")
-			(:td (format T "~$" paid)))
+			(:td "Total price")
+			(:td (format T "~$" total-price)))
+		  (:tr
+			(:td "Fee")
+			(:td (format T "~$" fee)))
 		  (:tr
 			(:td "Remaining budget")
 			(:td (format T "~$" new-budget))))
@@ -331,6 +350,9 @@
 				   (:td :colspan 3
 						(:input :type "submit" :value "Trade"))))))))))
 
+;; TODO
+;(defun transaction-summary (bet deadline shares paid fee budget-remaining))
+
 (define-url-fn
   (buy-or-sell-security)
   (standard-page
@@ -341,18 +363,66 @@
 		   (shares (parse-integer (parameter "shares")))
 		   (previous-outstanding (parse-integer (parameter "previous-outstanding")))
 		   (budget (db:user-budget *session-user*))
-		   (new-outstanding (+ previous-outstanding shares))
-		   (paid (msr:transaction-cost new-outstanding previous-outstanding))
-		   (security (db:get-security-by-id id))
+		   security
+		   buying-p
+		   selling-p
+		   new-outstanding
+		   new-share-price
+		   total-price
+		   current-position
+		   fee
+		   paid
+		   new-budget)
 
-		   ;; FIXME: UGLY!!! find a way to remove `d0' from LISP double
-		   (new-budget (float (rational (- budget paid)))))
+	  ;; get the security object
+	  (setf security (db:get-security-by-id id))
 
-	  (if (db:holds-shares? *session-user* security)
+	  ;; is the user buying or selling shares?
+	  (setf buying-p (> shares 0))
+	  (setf selling-p (not buying-p))
+
+	  (setf new-outstanding (+ previous-outstanding shares))
+
+	  ;; total price to move number of shares from previous-outstanding to
+	  ;; new-outstanding
+	  (setf total-price (msr:transaction-cost new-outstanding previous-outstanding))
+
+	  ;; buying this number of shares moves the price to new-share-price
+	  (setf new-share-price (msr:share-price new-outstanding))
+
+	  (setf current-position (db:get-current-position *session-user* security))
+
+	  ;; set fee to 0 if liquidation transaction, otherwise fp or f(1-p)
+	  (setf fee (if (not (= 0 current-position))
+
+				  ;; if it is a liquidation transaction, set fee to 0
+				  (if (or (and selling-p
+							   (> current-position 0))
+						  (and buying-p
+							   (< current-position 0)))
+
+					;; liquidation transaction fee
+					0
+
+					;; risk transaction fee
+					(if buying-p
+					  (* +trading-fee+ new-share-price)
+					  (* +trading-fee+ (- 1 new-share-price))))
+
+				  ;; we have no shares, so must be risk transaction
+				  (if buying-p
+					(* +trading-fee+ new-share-price)
+					(* +trading-fee+ (- 1 new-share-price)))))
+
+	  (setf paid (+ total-price fee))
+	  (setf new-budget (- budget paid))
+
+	  ;; either add new portfolio entry, or update existing one
+	  (if (db:user-security-exists? *session-user* security)
 		(db:update-portfolio *session-user* security shares)
 		(db:add-portfolio-entry *session-user* security shares))
 
-	  (db:update-budget *session-user* new-budget)
+	  (db:update-budget *session-user* (- paid))
 	  (db:update-security-shares security new-outstanding)
 
 	  (htm
@@ -369,7 +439,10 @@
 			(:td (fmt "~D" (abs shares))))
 		  (:tr
 			(:td (fmt "Paid~A" (if (< shares 0) " (to you)" "")))
-			(:td (format T "~$" (abs paid))))
+			(:td (format T "~$" (abs total-price))))
+		  (:tr
+			(:td "Transaction fee")
+			(:td (format T "~$" fee)))
 		  (:tr
 			(:td "Remaining budget")
 			(:td (format T "~$" new-budget))))
