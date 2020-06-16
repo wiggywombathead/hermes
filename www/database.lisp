@@ -5,7 +5,8 @@
 
 (defpackage :db
   (:use :cl :mito :sxql)
-  (:export :create-tables
+  (:export :init-database
+		   :create-tables
 		   :insert-user
 		   :insert-security
 		   :insert-user-security
@@ -49,7 +50,8 @@
 
 (in-package :db)
 
-(defconstant *banker-name* "bank")
+(defparameter +banker-name+ "bank")	; TODO: make this a constant
+(defparameter *banker* NIL)
 
 (defun connect-database ()
   " connect to the database "
@@ -95,19 +97,40 @@
 	   (disconnect-database)
 	   result)))
 
-(defun set-banker ()
-  (setf *banker* (get-user-by-name *banker-name*)))
+(defun insert-user (name &optional budget)
+  (with-open-database
+	(if budget
+	  (create-dao 'user :name name :budget budget)
+	  (create-dao 'user :name name))))
+
+(defun insert-security (bet deadline shares)
+  (with-open-database
+	;(format T "inserting security [~A,~A]~%" bet deadline)
+	(create-dao 'security :bet bet :deadline deadline :shares shares)))
+
+(defun get-user-by-name (name)
+  " return the user struct associated with NAME "
+  (with-open-database
+	(find-dao 'user :name name)))
 
 (defun create-tables ()
   " create tables for USER, SECURITY, and USER-SECURITY "
   (with-open-database
-	(mapcar #'ensure-table-exists '(user security user-security)))
-  (insert-user *banker-name*)
-  (set-banker))
+	(mapcar #'ensure-table-exists '(user security user-security))))
+
+(defun init-database ()
+  (create-tables)
+  (setf *banker* (if (get-user-by-name +banker-name+)
+				   (get-user-by-name +banker-name+)
+				   (insert-user +banker-name+))))
 
 (defun clear-tables ()
   (with-open-database
 	(mapcar #'delete-by-values '(user security user-security))))
+
+(defun drop-tables
+  (with-open-database
+	(mapcar #'drop-table '(user security user-security))))
 
 (defun update-table-definition (table)
   " update the table defined by class/struct TABLE "
@@ -115,19 +138,18 @@
 	; (migration-expression 'user) ; print the generated expression
 	(migrate-table table)))
 
-(defun insert-user (name)
-  (with-open-database
-	(create-dao 'user :name name)))
-
-(defun insert-security (bet deadline shares)
-  (with-open-database
-	;(format T "inserting security [~A,~A]~%" bet deadline)
-	(create-dao 'security :bet bet :deadline deadline :shares shares)))
-
 (defun user-exists? (name)
   " return T if user with username NAME exists, else NIL "
   (with-open-database
 	(not (eq NIL (find-dao 'user :name name)))))
+
+(defun get-current-position (user security)
+  " returns the number of shares USER currently holds of SECURITY "
+  (with-open-database
+	(let ((position (find-dao 'user-security :user user :security security)))
+	  (if position
+		(user-security-shares position)
+		0))))
 
 (defun holds-shares? (user security)
   " return T if user-security entry referring to USER and SECURITY exists and
@@ -135,13 +157,9 @@
   (not (= 0 (get-current-position user security))))
 
 (defun get-users ()
+  " return all users in the database "
   (with-open-database
 	(select-dao 'user)))
-
-(defun get-user-by-name (name)
-  " return the user struct associated with NAME "
-  (with-open-database
-	(find-dao 'user :name name)))
 
 (defun update-budget (user amount)
   " increase budget of USER by AMOUNT "
@@ -155,8 +173,18 @@
   (update-budget (get-user-by-name name) new-budget))
 
 (defun get-securities ()
+  " return all securities in the database "
   (with-open-database
 	(select-dao 'security)))
+
+(defun get-active-markets (date)
+  " return all securities whose deadline has not yet passed "
+  (with-open-database
+	(select-dao 'security (where (:> :deadline date)))))
+
+(defun get-unresolved-markets ()
+  ; TODO
+  " return all securities whose deadline has passed but outcomes have not been settled ")
 
 (defun get-security-by-id (id)
   (with-open-database
@@ -186,15 +214,7 @@
 	  (setf (slot-value portfolio-entry 'shares) (+ shares old-quantity))
 	  (save-dao portfolio-entry))))
 
-(defun get-current-position (user security)
-  " returns the number of shares USER currently holds of SECURITY "
-  (with-open-database
-	(let ((position (find-dao 'user-security :user user :security security)))
-	  (if position
-		(user-security-shares position)
-		0))))
-
 (defun pay-bank (user amount)
   " transfer AMOUNT from USER's account to the bank "
-  ;; TODO
-  )
+  (update-budget user (- amount))
+  (update-budget *banker* amount))

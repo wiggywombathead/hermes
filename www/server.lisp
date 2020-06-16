@@ -17,8 +17,6 @@
 (defparameter *server-port* 8080)
 (defparameter *dispatch-table* NIL)
 
-(defparameter *session-user* NIL)
-
 (defparameter *ajax-processor* NIL)
 
 ;; charge an extra:
@@ -30,6 +28,10 @@
 ;;; Server functions
 
 (defun init-server ()
+
+  ;; initialise the database (set the BANKER)
+  (db:init-database)
+
   (setf *web-server*
 		(make-instance 'easy-acceptor
 					   :name 'cassie
@@ -76,11 +78,11 @@
 					  (:li (:img :src "img/kappa.png" :class "logo"))
 					  (:li (:a :href "index" "home"))
 					  (:li (:a :href "about" "about"))
-					  (:li (:a :href "login" "login"))
-					  (if *session-user*
+					  (if (session-value 'session-user)
 						(htm
-						  (:li
-							(:a :href "logout-user" "logout"))))))
+						  (:li (:a :href "logout-user" "logout")))
+						(htm
+						  (:li (:a :href "login" "login"))))))
 
 			  ,@body))))
 
@@ -116,17 +118,22 @@
 ;;; Start the server
 (init-server)
 
+(defun pretty-datetime (datetime)
+  (local-time:format-timestring T datetime
+								:format '((:hour 2)":"(:min 2)" "(:day 2)"-"(:month 2)"-":year)))
+
 (define-url-fn
   (index)
+  (start-session)
   (standard-page
 	(:title "Cassie")
-	(:h1 "Welcome")
 
+	(:h1 "Welcome")
 	(:h2 (format T "~A"
-				 (if *session-user*
-				   (format NIL "Hello ~A! Funds: ~$"
-						   (db:user-name *session-user*)
-						   (db:user-budget *session-user*))
+				 (if (session-value 'session-user)
+				   (format NIL "Hello ~A! Funds: ~4$"
+						   (db:user-name (session-value 'session-user))
+						   (db:user-budget (session-value 'session-user)))
 				   "")))
 
 	(:h2 "Active Markets")
@@ -135,20 +142,21 @@
 			  (:th "Bet")
 			  (:th "Deadline")
 			  (:th :class "price" "Price ($)"))
+
 			(dolist (s (db:get-securities))
 			  (htm
 				(:tr
 				  (:td (format T "~S" (db:security-bet s)))
-				  (:td (format T "~A" (db:security-deadline s)))
-				  (:td :class "price" (format T "~$" (msr:share-price (db:security-shares s))))
-				  (if *session-user*
+				  (:td (pretty-datetime (db:security-deadline s)))
+				  (:td :class "price" (format T "~4$" (msr:share-price (db:security-shares s))))
+				  (if (session-value 'session-user)
 					(htm
 					  (:td (:form :action "trade-security" :method "POST"
 								  (:input :type :hidden :name "bet-id" :value (db:security-id s))
 								  (:input :type :submit :value "Trade")))))))))
 
 	;; create a new market
-	(if *session-user*
+	(if (session-value 'session-user)
 	  (htm
 		(:h2 "Create a Market")
 		(:div :id "market-maker"
@@ -157,7 +165,7 @@
 					 (:table
 					   (:tr
 						 (:td "Bet")
-						 (:td (:input :type "text" :name "bet")))
+						 (:td :colspan 2 (:input :type "text" :name "bet")))
 					   (:tr
 						 (:td "Deadline")
 						 (:td (:input :type "date" :name "deadline_date"))
@@ -197,22 +205,25 @@
 
 (define-url-fn
   (register-user)
+  (start-session)
   (let ((username (parameter "username")))
 	(unless (db:user-exists? username)
-	  (setf *session-user* (db:insert-user username))))
+	  (setf (session-value 'session-user) (db:insert-user username))))
   (redirect "/index"))
 
 (define-url-fn
   (login-user)
+  (start-session)
   (let ((username (parameter "username")))
 	(if (db:user-exists? username)
-	  (setf *session-user* (db:get-user-by-name username))
+	  (setf (session-value 'session-user) (db:get-user-by-name username))
 	  (redirect "/login")))
   (redirect "/index"))
 
 (define-url-fn
   (logout-user)
-  (setf *session-user* NIL)
+  (start-session)
+  (delete-session-value 'session-user)
   (redirect "/index"))
 
 (define-url-fn
@@ -239,7 +250,7 @@
 					  (:input :type :hidden :name "deadline" :value deadline)))
 			   (:tr
 				 (:td "Share price")
-				 (:td (format T "~$" share-price)))
+				 (:td (format T "~4$" share-price)))
 			   (:tr
 				 (:td "Initial Position")
 				 (:td (:input :type "number" :min 1 :value 1 :name "shares"))
@@ -253,19 +264,24 @@
 
 (define-url-fn
   (first-dibs)
+  (start-session)
   (standard-page
 	(:title "Transaction")
+
 	(:h1 "Transaction successful")
 
 	(let ((bet (parameter "bet"))
 		  (deadline (parameter "deadline"))
 		  (shares (parse-integer (parameter "shares")))
-		  (budget (db:user-budget *session-user*))
+		  (session-user (session-value 'session-user))
+		  budget
 		  total-price
 		  new-share-price
 		  fee
 		  paid
 		  new-budget)
+
+	  (setf budget (db:user-budget session-user))
 
 	  (setf total-price (msr:transaction-cost shares 0))
 	  (setf new-share-price (msr:share-price shares))
@@ -275,14 +291,15 @@
 
 	  (setf new-budget (- budget paid))
 
-	  (db:update-budget *session-user* (- paid))
-	  (db:pay-bank paid)
-	  
-	  ;; TODO: update the bank budget
+	  ;; update the current user's budget and transfer to the bank
+	  (db:pay-bank session-user paid)
 
 	  ;; insert the new security and record that USER now owns SECURITY
 	  (let ((inserted-security (db:insert-security bet deadline shares)))
-		(db:insert-user-security *session-user* inserted-security shares))
+		(db:insert-user-security
+		  session-user
+		  inserted-security
+		  shares))
 
 	  (htm
 		(:h2 "Summary")
@@ -298,17 +315,18 @@
 			(:td (fmt "~D" shares)))
 		  (:tr
 			(:td "Total price")
-			(:td (format T "~$" total-price)))
+			(:td (format T "~4$" total-price)))
 		  (:tr
 			(:td "Fee")
-			(:td (format T "~$" fee)))
+			(:td (format T "~4$" fee)))
 		  (:tr
 			(:td "Remaining budget")
-			(:td (format T "~$" new-budget))))
+			(:td (format T "~4$" new-budget))))
 		(:a :href "/index" :class "button" "Return to dashboard")))))
 
 (define-url-fn
   (trade-security)
+  (start-session)
   (standard-page
 	(:title "Trade Position")
 
@@ -316,9 +334,10 @@
 		   (security (db:get-security-by-id id))
 		   (outstanding-shares (db:security-shares security))
 		   (share-price (msr:share-price outstanding-shares))
+		   (session-user (session-value 'session-user))
 		   current-position)
 
-	  (setf current-position (db:get-current-position *session-user* security))
+	  (setf current-position (db:get-current-position session-user security))
 
 	  (htm
 		(:h1 "Trade")
@@ -336,10 +355,10 @@
 				   (:td (fmt "~A" (db:security-bet security)))
 				 (:tr
 				   (:td "Deadline")
-				   (:td (fmt "~A" (db:security-deadline security))))
+				   (:td (pretty-datetime (db:security-deadline security))))
 				 (:tr
 				   (:td "Share price")
-				   (:td (format T "~$" share-price)))
+				   (:td (format T "~4$" share-price)))
 				 (:tr
 				   (:td "Current Position")
 				   (:td (fmt "~D shares" current-position)))
@@ -356,14 +375,17 @@
 
 (define-url-fn
   (buy-or-sell-security)
+  (start-session)
   (standard-page
 	(:title "Transaction")
 	(:h1 "Transaction successful")
+	(:p (format NIL "SESSION USER: ~A" (session-value 'session-user)))
 
 	(let ((id (parameter "bet-id"))
 		  (shares (parse-integer (parameter "shares")))
 		  (previous-outstanding (parse-integer (parameter "previous-outstanding")))
-		  (budget (db:user-budget *session-user*))
+		  (session-user (session-value 'session-user))
+		  budget
 		  security
 		  buying-p
 		  selling-p
@@ -374,6 +396,8 @@
 		  fee
 		  paid
 		  new-budget)
+
+	  (setf budget (db:user-budget session-user))
 
 	  ;; get the security object
 	  (setf security (db:get-security-by-id id))
@@ -393,7 +417,7 @@
 	  (setf new-share-price (msr:share-price new-outstanding))
 
 	  (setf current-position
-			(db:get-current-position *session-user* security))
+			(db:get-current-position session-user security))
 
 	  ;; set fee to 0 if liquidation transaction, otherwise fp or f(1-p)
 	  (setf fee (if (not (= 0 current-position))
@@ -421,11 +445,13 @@
 	  (setf new-budget (- budget paid))
 
 	  ;; either add new portfolio entry, or update existing one
-	  (if (db:user-security-exists? *session-user* security)
-		(db:update-portfolio *session-user* security shares)
-		(db:add-portfolio-entry *session-user* security shares))
+	  (if (db:user-security-exists? session-user security)
+		(db:update-portfolio session-user security shares)
+		(db:add-portfolio-entry session-user security shares))
 
-	  (db:update-budget *session-user* (- paid))
+	  ;; update the current user's budget and transfer to the bank
+	  (db:pay-bank session-user paid)
+
 	  (db:update-security-shares security new-outstanding)
 
 	  (htm
@@ -436,17 +462,17 @@
 			(:td (fmt "~S" (db:security-bet security))))
 		  (:tr
 			(:td "Expires")
-			(:td (fmt "~A" (db:security-deadline security))))
+			(:td (pretty-datetime (db:security-deadline security))))
 		  (:tr
 			(:td (fmt "Shares ~A" (if (> shares 0) "bought" "sold")))
 			(:td (fmt "~D" (abs shares))))
 		  (:tr
 			(:td (fmt "Paid~A" (if (< shares 0) " (to you)" "")))
-			(:td (format T "~$" (abs total-price))))
+			(:td (format T "~4$" (abs total-price))))
 		  (:tr
 			(:td "Transaction fee")
-			(:td (format T "~$" fee)))
+			(:td (format T "~4$" fee)))
 		  (:tr
 			(:td "Remaining budget")
-			(:td (format T "~$" new-budget))))
+			(:td (format T "~4$" new-budget))))
 		(:a :href "/index" :class "button" "Return to dashboard")))))

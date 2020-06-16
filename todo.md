@@ -22,11 +22,16 @@
   - [x] Implement Logarithmic Market Scoring Rule
   - [x] Ability to trade between agents
   - [ ] Trading fees
-    - [ ] Pay to central "bank"
-  - [ ] Where does the money go? Create entry in `user` table for the bank, and
+    - [x] Pay to central "bank"
+	- [ ] Fix liquidation transactions: no fee on liquidation but only _up to_
+	  the amount they liquidate (i.e. selling back all they own and then more,
+	  there should be a fee on the portion that they short)
+  - [x] Where does the money go? Create entry in `user` table for the bank, and
 	use the funds transferred here to pay winnings?
-	- [ ] Finish `pay-banker` function
+	- [x] Finish `pay-banker` function
+	- [ ] Idea: keep track of money and fees paid to the bank separately?
   - [ ] What happens when the price approaches 0/1? Test.
+  - [ ] What to do about bank's balance going negative? Start with float?
 
 - [ ] Arbitration
   - [ ] 1/prior midpoint mechanism
@@ -45,4 +50,4 @@
   - [x] Consider merging `first-dibs` and `buy-or-sell-security` into one
 	function (i.e. `trade-security` uses same backend as `create-market`)
 	- No point: too different
-  - [ ] Clean up date/deadline formatting
+  - [x] Clean up date/deadline formatting -- `format-timestring`
