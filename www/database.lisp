@@ -46,7 +46,12 @@
 		   :update-security-shares
 		   :update-portfolio
 
-		   :pay-bank))
+		   :pay-bank
+
+		   :get-active-markets
+		   :get-unresolved-markets
+		   :report-market-outcome
+		   :get-arbiter-reports))
 
 (in-package :db)
 
@@ -81,7 +86,7 @@
 		   (security :col-type security)
 		   (shares :col-type :integer
 				   :initform 0)
-		   (report :col-type (or :bit :null))))
+		   (report :col-type (or :char :null))))
 
 (defun user-id (user)
   (object-id user))
@@ -128,9 +133,15 @@
   (with-open-database
 	(mapcar #'delete-by-values '(user security user-security))))
 
-(defun drop-tables
+(defun delete-table (table)
   (with-open-database
-	(mapcar #'drop-table '(user security user-security))))
+	(execute-sql (drop-table table))))
+
+;; TODO: fix this
+;(defun drop-tables
+;  (with-open-database
+;	(mapcar
+;	  #'(lambda (x) (drop-table x)) '(security))))
 
 (defun update-table-definition (table)
   " update the table defined by class/struct TABLE "
@@ -182,9 +193,13 @@
   (with-open-database
 	(select-dao 'security (where (:> :deadline date)))))
 
-(defun get-unresolved-markets ()
-  ; TODO
-  " return all securities whose deadline has passed but outcomes have not been settled ")
+(defun get-unresolved-markets (date)
+  " return all securities whose deadline has passed but outcomes have not been
+  settled -- this amounts to retrieving all securities whose closing-price is
+  null "
+  (with-open-database
+	(select-dao 'security (where (:and (:is-null :closing-price)
+									   (:< :deadline date))))))
 
 (defun get-security-by-id (id)
   (with-open-database
@@ -195,9 +210,9 @@
   (with-open-database
 	(save-dao security)))
 
-(defun insert-user-security (user security &optional shares)
+(defun insert-user-security (user security &optional shares report)
   (with-open-database
-	(create-dao 'user-security :user user :security security :shares shares)))
+	(create-dao 'user-security :user user :security security :shares shares :report report)))
 
 (defun user-security-exists? (user security)
   (with-open-database
@@ -218,3 +233,39 @@
   " transfer AMOUNT from USER's account to the bank "
   (update-budget user (- amount))
   (update-budget *banker* amount))
+
+(defun report-market-outcome (user security report)
+  " allow USER to submit a REPORT on the outcome of SECURITY "
+  (with-open-database
+	(let ((portfolio-entry (find-dao 'user-security :user user :security security)))
+	  (if portfolio-entry
+		(progn
+		  (setf (slot-value portfolio-entry 'report) report)
+		  (save-dao portfolio-entry))
+		(create-dao 'user-security
+					:user user
+					:security security
+					:shares 0
+					:report report)))))
+
+(defun get-arbiters (security)
+  " get all users who reported an outcome of SECURITY "
+  (with-open-database
+	(select-dao 'user (inner-join 'user-security :on (:= :user.id :user-security.user-id))
+				(where (:and (:= :user-security.security-id (security-id security))
+							 (:not-null :user-security.report))))))
+
+(defun get-arbiter-reports (security)
+  " return a list ((arbiter report) ...) of the arbiters and their report on
+  the outcome of SECURITY"
+  (let ((arbiters (get-arbiters security))
+		reports)
+
+	(dolist (arbiter arbiters)
+	  (with-open-database
+		(let ((report (parse-integer (user-security-report
+									   (find-dao 'user-security
+												 :user arbiter
+												 :security security)))))
+		  (push (list arbiter report) reports))))
+	reports))

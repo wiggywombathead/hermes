@@ -143,7 +143,7 @@
 			  (:th "Deadline")
 			  (:th :class "price" "Price ($)"))
 
-			(dolist (s (db:get-securities))
+			(dolist (s (db:get-active-markets (local-time:now)))
 			  (htm
 				(:tr
 				  (:td (format T "~S" (db:security-bet s)))
@@ -154,6 +154,24 @@
 					  (:td (:form :action "trade-security" :method "POST"
 								  (:input :type :hidden :name "bet-id" :value (db:security-id s))
 								  (:input :type :submit :value "Trade")))))))))
+
+	(:h2 "Unresolved Markets")
+	(:table :class "markets"
+			(:tr
+			  (:th "Bet")
+			  (:th "Expired on")
+
+			(dolist (s (db:get-unresolved-markets (local-time:now)))
+			  (htm
+				(:tr
+				  (:td (format T "~S" (db:security-bet s)))
+				  (:td (pretty-datetime (db:security-deadline s)))
+
+				  (if (session-value 'session-user)
+					(htm
+					  (:td (:form :action "resolve-market" :method "POST"
+								  (:input :type :hidden :name "bet-id" :value (db:security-id s))
+								  (:input :type :submit :value "Resolve"))))))))))
 
 	;; create a new market
 	(if (session-value 'session-user)
@@ -379,7 +397,6 @@
   (standard-page
 	(:title "Transaction")
 	(:h1 "Transaction successful")
-	(:p (format NIL "SESSION USER: ~A" (session-value 'session-user)))
 
 	(let ((id (parameter "bet-id"))
 		  (shares (parse-integer (parameter "shares")))
@@ -476,3 +493,46 @@
 			(:td "Remaining budget")
 			(:td (format T "~4$" new-budget))))
 		(:a :href "/index" :class "button" "Return to dashboard")))))
+
+(define-url-fn
+  (resolve-market)
+  (start-session)
+  (standard-page
+	(:title "Resolve Security")
+	(:h1 "Resolve Security")
+
+	(let ((id (parameter "bet-id"))
+		  security)
+
+	  (setf security (db:get-security-by-id id))
+
+	  (htm
+		(:form :action "report-security" :method "POST"
+			   (:input :type :hidden :name "id" :value id)
+			   (:table
+				 (:tr
+				   (:th "Bet")
+				   (:td (fmt "~S" (db:security-bet security))))
+				 (:tr
+				   (:th "Expired on")
+				   (:td (pretty-datetime (db:security-deadline security))))
+				 (:tr
+				   (:th "Market Outcome")
+				   (:td (:input :type :radio :name "report" :value 1) "Yes"
+						(:input :type :radio :name "report" :value 0) "No"))
+				 (:tr
+				   (:td :colspan 2
+						(:input :type :submit :value "Submit")))))))))
+
+(define-url-fn
+  (report-security)
+  (start-session)
+  (let ((id (parameter "id"))
+		(report (parameter "report"))
+		(session-user (session-value 'session-user))
+		security)
+
+	(setf security (db:get-security-by-id id))
+
+	(db:report-market-outcome session-user security report))
+  (redirect "/index"))
