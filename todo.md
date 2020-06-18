@@ -32,9 +32,11 @@
 	- [ ] Idea: keep track of money and fees paid to the bank separately?
   - [ ] What happens when the price approaches 0/1? Test.
   - [ ] What to do about bank's balance going negative? Start with float?
+  - [ ] Separate into own interface to clean up
 
 - [ ] Arbitration
   - [ ] 1/prior midpoint mechanism
+    - [ ] Retrieve closing price and use as prior signal probability `mu`
   - [ ] How to get arbitrators?
 
 - [ ] Documentation

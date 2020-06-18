@@ -12,6 +12,7 @@
 
 (load "database.lisp")
 (load "msr.lisp")
+(load "arbitration.lisp")
 
 (defparameter *web-server* NIL)
 (defparameter *server-port* 8080)
@@ -171,7 +172,10 @@
 					(htm
 					  (:td (:form :action "resolve-market" :method "POST"
 								  (:input :type :hidden :name "bet-id" :value (db:security-id s))
-								  (:input :type :submit :value "Resolve"))))))))))
+								  (:input :type :submit :value "Report Outcome")))
+					  (:td (:form :action "close-market" :method "POST"
+								  (:input :type :hidden :name "bet-id" :value (db:security-id s))
+								  (:input :type :submit :value "Close Market"))))))))))
 
 	;; create a new market
 	(if (session-value 'session-user)
@@ -246,6 +250,7 @@
 
 (define-url-fn
   (create-market)
+  (start-session)
   (let ((bet (parameter "bet"))
 		(deadline (format NIL "~A ~A"
 						  (parameter "deadline_date")
@@ -397,7 +402,10 @@
   (standard-page
 	(:title "Transaction")
 	(:h1 "Transaction successful")
+	
+	(:p (fmt "~A" (db:user-name (session-value 'session-user))))
 
+	;; TODO: move most of this to separate file/interface?
 	(let ((id (parameter "bet-id"))
 		  (shares (parse-integer (parameter "shares")))
 		  (previous-outstanding (parse-integer (parameter "previous-outstanding")))
@@ -536,3 +544,50 @@
 
 	(db:report-market-outcome session-user security report))
   (redirect "/index"))
+
+(define-url-fn
+  (close-market)
+  (start-session)
+
+  (let ((id (parameter "bet-id"))
+		security
+		arbiter-reports
+		(reports (make-hash-table))
+		arbiters
+		pairs)
+
+	(setf security (db:get-security-by-id id))
+
+	;; TODO: deal with case that there is odd number of arbiters (lest
+	;; util:random-pairing returns NIL)
+
+	(setf arbiter-reports (db:get-arbiter-reports security))
+
+	;; convert list of tuples ((user report) ...) into hashmap
+	(dolist (arbiter-report arbiter-reports)
+	  (setf (gethash (first arbiter-report) reports) (second arbiter-report)))
+
+	(setf arbiters (mapcar #'first arbiter-reports))
+
+	;; pair arbiters randomly
+	(setf pairs (util:random-pairing arbiters))
+
+	(standard-page
+	  (:title "Arbs")
+	  (dolist (pair pairs)
+		(let ((i (first pair))
+			  (j (second pair))
+			  report-i
+			  report-j)
+		  (setf report-i (gethash i reports))
+		  (setf report-j (gethash j reports))
+
+		  ;; TODO: finish/verify
+		  (arb:one-over-prior i report-i j report-j 0.5 10)
+
+		  (htm
+			(:p (format T "~A reported ~D, ~A reported ~D"
+						(db:user-name i)
+						report-i
+						(db:user-name j)
+						report-j))))))))

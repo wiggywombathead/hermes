@@ -1,5 +1,11 @@
 ;;;; Collection of utility functions for various operations on lists
 
+(defpackage :util
+  (:use :cl)
+  (:export :random-pairing))
+
+(in-package :util)
+
 (defun random-range (high &optional (low 0))
   " returns a random number in the range [low,high) "
   (+ low (random (- high low))))
@@ -48,7 +54,7 @@
 	lst))
 
 (defun random-pairing (lst)
-  " randomly pair items from LST together "
+  " randomly pair items from LST together if length(lst) is even "
   (if (evenp (length lst))
 	(loop for (a b) on (shuffle lst) by #'cddr while b
 		  collect (list a b))))

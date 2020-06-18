@@ -47,6 +47,7 @@
 		   :update-portfolio
 
 		   :pay-bank
+		   :bank-pay
 
 		   :get-active-markets
 		   :get-unresolved-markets
@@ -136,12 +137,6 @@
 (defun delete-table (table)
   (with-open-database
 	(execute-sql (drop-table table))))
-
-;; TODO: fix this
-;(defun drop-tables
-;  (with-open-database
-;	(mapcar
-;	  #'(lambda (x) (drop-table x)) '(security))))
 
 (defun update-table-definition (table)
   " update the table defined by class/struct TABLE "
@@ -233,6 +228,11 @@
   " transfer AMOUNT from USER's account to the bank "
   (update-budget user (- amount))
   (update-budget *banker* amount))
+
+(defun bank-pay (user amount)
+  " transfer AMOUNT from bank's account to USER "
+  (update-budget *banker* (- amount))
+  (update-budget user amount))
 
 (defun report-market-outcome (user security report)
   " allow USER to submit a REPORT on the outcome of SECURITY "
