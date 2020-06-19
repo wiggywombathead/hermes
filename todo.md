@@ -10,6 +10,7 @@
 	- [ ] Create markets under categories
 	- [x] Remember to implement trading fees
   - [ ] Find a way to point "/" to "/index" (hunchentoot)
+  - [x] Portfolio page
 
 - [ ] Database
   - [x] Set up Mito
@@ -17,6 +18,8 @@
   - [x] Clean up connect/disconnect interface?
     - `with-open-database` macro
   - [ ] Trade histories table
+  - [ ] Improve/macro-ise the `get-`, `get-` interface for retrieving items
+	from `user-securities`
 
 - [ ] Trading
   - [x] Implement Logarithmic Market Scoring Rule
@@ -36,8 +39,10 @@
 
 - [ ] Arbitration
   - [ ] 1/prior midpoint mechanism
-    - [ ] Retrieve closing price and use as prior signal probability `mu`
+    - [x] Retrieve closing price and use as prior signal probability `mu`
   - [ ] How to get arbitrators?
+    - [ ] Anyone can arbitrate: deal with odd number of arbiters
+	- [ ] Arbiters randomly (pre-?) selected: how long to wait
 
 - [ ] Documentation
   - [ ] Development diary notes

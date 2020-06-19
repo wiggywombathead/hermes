@@ -23,8 +23,14 @@
 ;; charge an extra:
 ;;	- fp for buys
 ;;  - f(1-p) for sells
-;;	- 0 for liquidity/
+;;	- 0 for liquidation transaction
 (defconstant +trading-fee+ 0.05)
+
+;; one-over-prior:
+;;	- k * mu		if xi = xj = 0
+;;	- k * (1 - mu)	if xi = xj = 1
+;;	- 0				otherwise
+(defconstant +k+ 10)
 
 ;;; Server functions
 
@@ -81,6 +87,7 @@
 					  (:li (:a :href "about" "about"))
 					  (if (session-value 'session-user)
 						(htm
+						  (:li (:a :href "portfolio" "portfolio"))
 						  (:li (:a :href "logout-user" "logout")))
 						(htm
 						  (:li (:a :href "login" "login"))))))
@@ -142,14 +149,14 @@
 			(:tr
 			  (:th "Bet")
 			  (:th "Deadline")
-			  (:th :class "price" "Price ($)"))
+			  (:th :class "number" "Price ($)"))
 
 			(dolist (s (db:get-active-markets (local-time:now)))
 			  (htm
 				(:tr
 				  (:td (format T "~S" (db:security-bet s)))
 				  (:td (pretty-datetime (db:security-deadline s)))
-				  (:td :class "price" (format T "~4$" (msr:share-price (db:security-shares s))))
+				  (:td :class "number" (format T "~4$" (msr:share-price (db:security-shares s))))
 				  (if (session-value 'session-user)
 					(htm
 					  (:td (:form :action "trade-security" :method "POST"
@@ -161,12 +168,14 @@
 			(:tr
 			  (:th "Bet")
 			  (:th "Expired on")
+			  (:th "Closing price"))
 
 			(dolist (s (db:get-unresolved-markets (local-time:now)))
 			  (htm
 				(:tr
 				  (:td (format T "~S" (db:security-bet s)))
 				  (:td (pretty-datetime (db:security-deadline s)))
+				  (:td :class "number" (format T "~4$" (msr:share-price (db:security-shares s))))
 
 				  (if (session-value 'session-user)
 					(htm
@@ -175,7 +184,7 @@
 								  (:input :type :submit :value "Report Outcome")))
 					  (:td (:form :action "close-market" :method "POST"
 								  (:input :type :hidden :name "bet-id" :value (db:security-id s))
-								  (:input :type :submit :value "Close Market"))))))))))
+								  (:input :type :submit :value "Close Market")))))))))
 
 	;; create a new market
 	(if (session-value 'session-user)
@@ -200,7 +209,58 @@
   (standard-page
 	(:title "About")
 	(:h1 "About")
-	(:p "This is an about section")))
+	(:h2 "What is this?")
+
+	(:p "This is a peer prediction market where you can bet on the outcome of
+		anything you want, be it the winner of the presidential election, or
+		who will win the next football match between Arsenal and Tottenham
+		Hotspur.")
+
+	(:h2 "How do I use it?")
+	(:p "To make and trade bets you need to first register, which can be done
+		using the links at the top of the page. After this, if you go to the
+		dashboard you will see all the current active/unresolved markets, as
+		well as a prompt to create a market of your own. This is where you can
+		start creating your own bets for people to trade on.")
+
+	(:p "This works by using a peer-prediction mechanism, so instead of a
+		central moderator deciding what the \"true\" outcome of the bet was,
+		this is instead decided amongst users. You can report on the outcome of
+		a market, based on what you observed (e.g. by reading the news,
+												   watching the match, etc.),
+		and you will (/may) be rewarded for doing so. Since everyone can act as
+		an \"arbiter\" in the market, users must be incentivised to act
+		truthfully, and you will find that truthfully reporting the outcome of
+		the event is a best response.")
+
+	(:p "Once the outcome of the market has been peer-determined, you will be
+		paid for any shares you hold in it. This includes short positions,
+		meaning if you have reason to believe an event " (:em "won't") "
+		happen, then you can short-sell shares in the market by buying negative
+		shares in it.")))
+
+(define-url-fn
+  (portfolio)
+  (start-session)
+  (standard-page
+	(:title "Portfolio")
+	(:h1 "My Portfolio")
+	(:table
+	  (:tr
+		(:th "Bet")
+		(:th "Deadline")
+		(:th "Current Price")
+		;; TODO: bought-at price
+		(:th "Shares"))
+	  (dolist (security (db:get-portfolio-securities (session-value 'session-user)))
+		(htm
+		  (:tr
+			(:td (fmt "~S" (db:security-bet security)))
+			(:td (pretty-datetime (db:security-deadline security)))
+			(:td :class "number"
+				 (format T "~4$" (msr:share-price (db:security-shares security))))
+			(:td (fmt "~D" (db:get-current-position (session-value 'session-user)
+													security)))))))))
 
 (define-url-fn
   (login)
@@ -402,8 +462,6 @@
   (standard-page
 	(:title "Transaction")
 	(:h1 "Transaction successful")
-	
-	(:p (fmt "~A" (db:user-name (session-value 'session-user))))
 
 	;; TODO: move most of this to separate file/interface?
 	(let ((id (parameter "bet-id"))
@@ -550,13 +608,17 @@
   (start-session)
 
   (let ((id (parameter "bet-id"))
-		security
+		security	
+		mu			; prior probability that an agent receives +ve signal
 		arbiter-reports
-		(reports (make-hash-table))
-		arbiters
-		pairs)
+		(reports-table (make-hash-table))
+		arbiters	; just the list of arbiters
+		reports		; just the list of reports
+		pairs
+		outcome)
 
 	(setf security (db:get-security-by-id id))
+	(setf mu (msr:share-price (db:security-shares security)))
 
 	;; TODO: deal with case that there is odd number of arbiters (lest
 	;; util:random-pairing returns NIL)
@@ -565,29 +627,64 @@
 
 	;; convert list of tuples ((user report) ...) into hashmap
 	(dolist (arbiter-report arbiter-reports)
-	  (setf (gethash (first arbiter-report) reports) (second arbiter-report)))
+	  (setf (gethash (first arbiter-report) reports-table) (second arbiter-report)))
 
 	(setf arbiters (mapcar #'first arbiter-reports))
+	(setf reports (mapcar #'second arbiter-reports))
+
+	;; the payoff of each share held is the fraction of arbiters reporting 1
+	(setf outcome (float (/ (count 1 reports) (length reports))))
+
+	;; set the payoff for each share held in the database
+	(db:set-security-outcome security outcome)
+
+	;; pay the shareholders
+	(let ((shareholder-shares (db:get-shareholder-shares security))
+		  shareholder
+		  shares)
+	  (dolist (shareholder-share shareholder-shares)
+		(setf shareholder (first shareholder-share))
+		(setf shares (second shareholder-share))
+
+		(format T "Paying ~A ~4$ for ~D shares of ~A"
+				(db:user-name shareholder)
+				(* outcome shares)
+				shares
+				(db:security-bet security))
+
+		(db:bank-pay shareholder (* outcome shares))))
 
 	;; pair arbiters randomly
 	(setf pairs (util:random-pairing arbiters))
 
 	(standard-page
-	  (:title "Arbs")
+	  (:title "One-Over-Prior Payment")
+
+	  (:p (format T "Closing share price: ~4$" mu))
+
 	  (dolist (pair pairs)
 		(let ((i (first pair))
 			  (j (second pair))
 			  report-i
-			  report-j)
-		  (setf report-i (gethash i reports))
-		  (setf report-j (gethash j reports))
+			  report-j
+			  payment)
+
+		  (setf report-i (gethash i reports-table))
+		  (setf report-j (gethash j reports-table))
 
 		  ;; TODO: finish/verify
-		  (arb:one-over-prior i report-i j report-j 0.5 10)
+		  (setf payment (arb:one-over-prior report-i report-j mu 10))
+
+		  ;; pay the arbiters
+		  (db:bank-pay i payment)
+		  (db:bank-pay j payment)
 
 		  (htm
 			(:p (format T "~A reported ~D, ~A reported ~D"
 						(db:user-name i)
 						report-i
 						(db:user-name j)
-						report-j))))))))
+						report-j))
+			(:p (format T "Paying arbiters: ~4$" payment)))))
+	  
+	  (:a :href "/index" :class "button" "Return to dashboard"))))

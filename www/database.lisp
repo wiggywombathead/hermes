@@ -1,4 +1,6 @@
-;;;; Implementation of database
+;;;; Database
+;;; Defines and creates tables and responsible for all persistent-storage
+;;; access
 
 (ql:quickload :mito)
 (ql:quickload :sxql)
@@ -7,6 +9,8 @@
   (:use :cl :mito :sxql)
   (:export :init-database
 		   :create-tables
+		   :update-table-definitions
+
 		   :insert-user
 		   :insert-security
 		   :insert-user-security
@@ -20,6 +24,7 @@
 		   ;; security stuff
 		   :get-securities
 		   :get-security-by-id
+		   :set-security-outcome
 
 		   ;; portfolio stuff
 		   :add-portfolio-entry
@@ -36,7 +41,7 @@
 		   :security-bet
 		   :security-shares
 		   :security-deadline
-		   :security-closing-price
+		   :security-outcome
 
 		   :user-security-shares
 
@@ -52,7 +57,11 @@
 		   :get-active-markets
 		   :get-unresolved-markets
 		   :report-market-outcome
-		   :get-arbiter-reports))
+
+		   :get-portfolio
+		   :get-portfolio-securities
+		   :get-arbiter-reports
+		   :get-shareholder-shares))
 
 (in-package :db)
 
@@ -80,7 +89,7 @@
 		   (shares :initform 0
 				   :col-type :integer)
 		   (deadline :col-type :datetime)
-		   (closing-price :col-type (or :double :null))))
+		   (outcome :col-type (or :double :null))))
 
 (deftable user-security ()
 		  ((user :col-type user)
@@ -88,6 +97,8 @@
 		   (shares :col-type :integer
 				   :initform 0)
 		   (report :col-type (or :char :null))))
+
+;;; Primary key accessors
 
 (defun user-id (user)
   (object-id user))
@@ -111,7 +122,6 @@
 
 (defun insert-security (bet deadline shares)
   (with-open-database
-	;(format T "inserting security [~A,~A]~%" bet deadline)
 	(create-dao 'security :bet bet :deadline deadline :shares shares)))
 
 (defun get-user-by-name (name)
@@ -125,6 +135,7 @@
 	(mapcar #'ensure-table-exists '(user security user-security))))
 
 (defun init-database ()
+  " create the tables and set the *BANKER* special variable "
   (create-tables)
   (setf *banker* (if (get-user-by-name +banker-name+)
 				   (get-user-by-name +banker-name+)
@@ -143,6 +154,9 @@
   (with-open-database
 	; (migration-expression 'user) ; print the generated expression
 	(migrate-table table)))
+
+(defun update-table-definitions ()
+  (mapcar #'update-table-definition '(user security user-security)))
 
 (defun user-exists? (name)
   " return T if user with username NAME exists, else NIL "
@@ -190,10 +204,10 @@
 
 (defun get-unresolved-markets (date)
   " return all securities whose deadline has passed but outcomes have not been
-  settled -- this amounts to retrieving all securities whose closing-price is
-  null "
+  settled -- this amounts to retrieving all securities whose outcome is
+  null (i.e. as yet not determined) "
   (with-open-database
-	(select-dao 'security (where (:and (:is-null :closing-price)
+	(select-dao 'security (where (:and (:is-null :outcome)
 									   (:< :deadline date))))))
 
 (defun get-security-by-id (id)
@@ -202,6 +216,13 @@
 
 (defun update-security-shares (security new-quantity)
   (setf (slot-value security 'shares) new-quantity)
+  (with-open-database
+	(save-dao security)))
+
+(defun set-security-outcome (security outcome)
+  " store the OUTCOME of SECURITY, to pay out winnings to all users owning
+  shares in it "
+  (setf (slot-value security 'outcome) outcome)
   (with-open-database
 	(save-dao security)))
 
@@ -248,6 +269,29 @@
 					:shares 0
 					:report report)))))
 
+(defun get-portfolio-securities (user)
+  " return a list of all securities held by USER "
+  (with-open-database
+	(select-dao 'security (inner-join 'user-security
+									  :on (:= :security.id :user-security.security-id))
+				(where (:and (:= :user-security.user-id (user-id user))
+							 (:!= :user-security.shares 0))))))
+
+(defun get-portfolio (user)
+  " return a list ((security shares) ...) of the number of shares owned for
+  each security in USER's portfolio "
+  (let ((securities (get-portfolio-securities user))
+		portfolio)
+
+	(dolist (security securities)
+	  (with-open-database
+		(let ((shares (user-security-shares
+						(find-dao 'user-security
+								  :user user
+								  :security security))))
+		  (push (list security shares) portfolio))))
+	portfolio))
+
 (defun get-arbiters (security)
   " get all users who reported an outcome of SECURITY "
   (with-open-database
@@ -269,3 +313,24 @@
 												 :security security)))))
 		  (push (list arbiter report) reports))))
 	reports))
+
+(defun get-shareholders (security)
+  " get all users who hold non-zero shares of SECURITY "
+  (with-open-database
+	(select-dao 'user (inner-join 'user-security :on (:= :user.id :user-security.user-id))
+				(where (:and (:= :user-security.security-id (security-id security))
+							 (:!= :user-security.shares 0))))))
+
+(defun get-shareholder-shares (security)
+  " return a list ((user shares) ...) of the number of shares held by user of
+  SECURITY "
+  (let ((shareholders (get-shareholders security))
+		user-shares)
+	(dolist (shareholder shareholders)
+	  (with-open-database
+		(let ((shares (user-security-shares
+						(find-dao 'user-security
+								  :user shareholder
+								  :security security))))
+		  (push (list shareholder shares) user-shares))))
+	user-shares))
