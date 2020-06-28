@@ -2,7 +2,8 @@
 
 (defpackage :util
   (:use :cl)
-  (:export :random-pairing))
+  (:export :remove-nth
+		   :random-pairing))
 
 (in-package :util)
 
@@ -58,3 +59,8 @@
   (if (evenp (length lst))
 	(loop for (a b) on (shuffle lst) by #'cddr while b
 		  collect (list a b))))
+
+(defun remove-nth (n lst)
+  (if (and lst (> n 0))
+	(cons (car lst) (remove-nth (1- n) (cdr lst)))
+	(cdr lst)))

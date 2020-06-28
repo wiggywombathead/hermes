@@ -12,6 +12,7 @@
 
 (load "database.lisp")
 (load "msr.lisp")
+(load "market.lisp")
 (load "arbitration.lisp")
 
 (defparameter *web-server* NIL)
@@ -19,18 +20,6 @@
 (defparameter *dispatch-table* NIL)
 
 (defparameter *ajax-processor* NIL)
-
-;; charge an extra:
-;;	- fp for buys
-;;  - f(1-p) for sells
-;;	- 0 for liquidation transaction
-(defconstant +trading-fee+ 0.05)
-
-;; one-over-prior:
-;;	- k * mu		if xi = xj = 0
-;;	- k * (1 - mu)	if xi = xj = 1
-;;	- 0				otherwise
-(defconstant +k+ 10)
 
 ;;; Server functions
 
@@ -209,35 +198,48 @@
   (standard-page
 	(:title "About")
 	(:h1 "About")
+
 	(:h2 "What is this?")
-
-	(:p "This is a peer prediction market where you can bet on the outcome of
-		anything you want, be it the winner of the presidential election, or
-		who will win the next football match between Arsenal and Tottenham
-		Hotspur.")
-
+	(:p "This is a peer prediction market where you can bet on the (binary)
+		outcome of anything you want, such as the winner of the presidential
+		election, or who will win the next football match between Arsenal and
+		Tottenham Hotspur. It uses a peer-prediction mechanism to collect bets
+		and decide on their outcome based on reports from its userbase. This
+		opens up the types of bets that can be made since they do not have to
+		be specifically provided by a central moderator, and it is left to the
+		users to decide on their outcome.")
+	
 	(:h2 "How do I use it?")
-	(:p "To make and trade bets you need to first register, which can be done
-		using the links at the top of the page. After this, if you go to the
-		dashboard you will see all the current active/unresolved markets, as
-		well as a prompt to create a market of your own. This is where you can
-		start creating your own bets for people to trade on.")
+	(:p "After registering, the dashboard will show all of the current markets.
+		Active markets are those where shares can still be bought and sold,
+		while unresolved markets are those whose deadlines have passed but
+		still require users to report on the outcome of the bet.")
 
-	(:p "This works by using a peer-prediction mechanism, so instead of a
-		central moderator deciding what the \"true\" outcome of the bet was,
-		this is instead decided amongst users. You can report on the outcome of
-		a market, based on what you observed (e.g. by reading the news,
-												   watching the match, etc.),
-		and you will (/may) be rewarded for doing so. Since everyone can act as
-		an \"arbiter\" in the market, users must be incentivised to act
-		truthfully, and you will find that truthfully reporting the outcome of
-		the event is a best response.")
+	(:p "Any user is able to create their own market by simply providing a bet
+		and the deadline by which you believe the outcome will be realised. For
+		example, if betting on the outcome of a single football match, the bet
+		would be who wins and the deadline will be the time at which the match
+		finishes. Since other people will be reporting on what the outcome is,
+		you should try to make your bet as unambiguous as possible. After
+		creating the market it will then be possible to trade shares in it up
+		until the deadline.")
 
-	(:p "Once the outcome of the market has been peer-determined, you will be
-		paid for any shares you hold in it. This includes short positions,
-		meaning if you have reason to believe an event " (:em "won't") "
-		happen, then you can short-sell shares in the market by buying negative
-		shares in it.")))
+	(:p "When there are markets listed under \"Unresolved Markets\", you can
+		report its outcome based on what you observed \(e.g. by reading the
+		news, watching the match, or otherwise hearing about it\). Since
+		reporting on a market helps the mechanism to work, you will be given a
+		small monetary reward for doing so. This incentivises users to act
+		truthfully, meaning users will be worse off if they lie in an attempt
+		to swing the outcome in their favour.")
+
+	(:p "Once the outcome of the market has been peer-determined you will
+		receive a payout for any shares you hold in it. The payout-per-share is
+		the fraction of reporters that said that the outcome indeed occurred.
+		For example, if eight uers report a market as 'Yes' and two reporters
+		report a 'No', then for each share you own you will be paid 40p. This
+		works for short-selling shares as well, in which case you will need to
+		buy back that amount of shares at their payout price \(meaning ideally
+		0 reporters report a 'Yes' and hence all report 'No'\).")))
 
 (define-url-fn
   (portfolio)
@@ -259,8 +261,12 @@
 			(:td (pretty-datetime (db:security-deadline security)))
 			(:td :class "number"
 				 (format T "~4$" (msr:share-price (db:security-shares security))))
-			(:td (fmt "~D" (db:get-current-position (session-value 'session-user)
-													security)))))))))
+			(:td :class "number"
+				 (fmt "~D" (db:get-current-position (session-value 'session-user)
+													security)))
+			(:td (:form :action "trade-security" :method :POST
+						(:input :type :hidden :name "bet-id" :value (db:security-id security))
+						(:input :type :submit :value "Trade")))))))))
 
 (define-url-fn
   (login)
@@ -369,7 +375,8 @@
 	  (setf total-price (msr:transaction-cost shares 0))
 	  (setf new-share-price (msr:share-price shares))
 
-	  (setf fee (* +trading-fee+ new-share-price))
+	  (setf fee (mkt:calculate-fee 0 shares new-share-price))
+
 	  (setf paid (+ total-price fee))
 
 	  (setf new-budget (- budget paid))
@@ -425,7 +432,7 @@
 	  (htm
 		(:h1 "Trade")
 		(:form :action "buy-or-sell-security" :method "POST"
-			   :onsubmit (js-ensure-nonempty "Quantity cannot be empty" shares)
+			   :onsubmit (js-ensure-nonempty "Quantity cannot be empty" shares buying)
 			   (:table
 				 (:input :type :hidden :name "bet-id" :value id)
 
@@ -447,8 +454,12 @@
 				   (:td (fmt "~D shares" current-position)))
 				 (:tr
 				   (:td "Quantity")
-				   (:td (:input :type :number :name "shares"))
+				   (:td (:input :type :number :min 1 :value 1 :name "shares"))
 				   (:td "shares"))
+				 (:tr
+				   (:td "Buy/Sell")
+				   (:td (:input :type :radio :value 1 :name "buying" :checked "checked") "Buy" (:br)
+						(:input :type :radio :value 0 :name "buying") "Sell"))
 				 (:tr
 				   (:td :colspan 3
 						(:input :type "submit" :value "Trade"))))))))))
@@ -465,13 +476,12 @@
 
 	;; TODO: move most of this to separate file/interface?
 	(let ((id (parameter "bet-id"))
+		  (buying-p (= 1 (parse-integer (parameter "buying"))))
 		  (shares (parse-integer (parameter "shares")))
 		  (previous-outstanding (parse-integer (parameter "previous-outstanding")))
 		  (session-user (session-value 'session-user))
 		  budget
 		  security
-		  buying-p
-		  selling-p
 		  new-outstanding
 		  new-share-price
 		  total-price
@@ -486,8 +496,8 @@
 	  (setf security (db:get-security-by-id id))
 
 	  ;; is the user buying or selling shares?
-	  (setf buying-p (> shares 0))
-	  (setf selling-p (not buying-p))
+	  (if (not buying-p)
+		(setf shares (- shares)))
 
 	  (setf new-outstanding (+ previous-outstanding shares))
 
@@ -503,26 +513,7 @@
 			(db:get-current-position session-user security))
 
 	  ;; set fee to 0 if liquidation transaction, otherwise fp or f(1-p)
-	  (setf fee (if (not (= 0 current-position))
-
-				  ;; if it is a liquidation transaction, set fee to 0
-				  (if (or (and selling-p
-							   (> current-position 0))
-						  (and buying-p
-							   (< current-position 0)))
-
-					;; liquidation transaction fee
-					0
-
-					;; risk transaction fee
-					(if buying-p
-					  (* +trading-fee+ new-share-price)
-					  (* +trading-fee+ (- 1 new-share-price))))
-
-				  ;; we have no shares, so must be risk transaction
-				  (if buying-p
-					(* +trading-fee+ new-share-price)
-					(* +trading-fee+ (- 1 new-share-price)))))
+	  (setf fee (mkt:calculate-fee current-position shares new-share-price))
 
 	  (setf paid (+ total-price fee))
 	  (setf new-budget (- budget paid))
@@ -620,10 +611,17 @@
 	(setf security (db:get-security-by-id id))
 	(setf mu (msr:share-price (db:security-shares security)))
 
-	;; TODO: deal with case that there is odd number of arbiters (lest
-	;; util:random-pairing returns NIL)
-
 	(setf arbiter-reports (db:get-arbiter-reports security))
+
+	;; if there are an odd number of reports, randomly remove one
+	(if (oddp (length arbiter-reports))
+	  (setf arbiter-reports (util:remove-nth (random (length arbiter-reports))
+											 arbiter-reports)))
+
+	;; if there are zero reports, redirect
+	;; TODO: make it obvious why the redirect occurred/nothing happened
+	(if (zerop (length arbiter-reports))
+	  (redirect "/index"))
 
 	;; convert list of tuples ((user report) ...) into hashmap
 	(dolist (arbiter-report arbiter-reports)
@@ -646,8 +644,10 @@
 		(setf shareholder (first shareholder-share))
 		(setf shares (second shareholder-share))
 
-		(format T "Paying ~A ~4$ for ~D shares of ~A"
+		(format T "Paying ~A ~D*~4$=~4$ for ~D shares of ~A"
 				(db:user-name shareholder)
+				shares
+				outcome
 				(* outcome shares)
 				shares
 				(db:security-bet security))
@@ -673,7 +673,7 @@
 		  (setf report-j (gethash j reports-table))
 
 		  ;; TODO: finish/verify
-		  (setf payment (arb:one-over-prior report-i report-j mu 10))
+		  (setf payment (arb:one-over-prior report-i report-j mu))
 
 		  ;; pay the arbiters
 		  (db:bank-pay i payment)

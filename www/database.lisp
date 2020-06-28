@@ -149,6 +149,9 @@
   (with-open-database
 	(execute-sql (drop-table table))))
 
+(defun delete-tables ()
+  (mapcar #'delete-table '(user security user_security)))
+
 (defun update-table-definition (table)
   " update the table defined by class/struct TABLE "
   (with-open-database
