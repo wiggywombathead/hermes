@@ -1,5 +1,5 @@
 body {
-	font-family: "Consolas";
+	font-family: "Merriweather", serif;
 	font-size: 12pt;
 }
 
@@ -42,6 +42,6 @@ th.number, td.number {
 	text-align: center
 }
 
-table.markets tr:nth-child(even) {
+table.striped tr:nth-child(odd) {
 	background-color: #f2f2f2;
 }

@@ -61,6 +61,9 @@
 			  (:meta :http-equiv "Content-Type"
 					 :content "text/html;charset=utf-8")
 
+			  (:link :rel "stylesheet"
+					 :href "https://fonts.googleapis.com/css?family=Merriweather")
+
 			  (:link :type "text/css"
 					 :rel "stylesheet"
 					 :href "/style.css"))
@@ -134,7 +137,7 @@
 				   "")))
 
 	(:h2 "Active Markets")
-	(:table :class "markets"
+	(:table :class "striped"
 			(:tr
 			  (:th "Bet")
 			  (:th "Deadline")
@@ -153,7 +156,7 @@
 								  (:input :type :submit :value "Trade")))))))))
 
 	(:h2 "Unresolved Markets")
-	(:table :class "markets"
+	(:table :class "striped"
 			(:tr
 			  (:th "Bet")
 			  (:th "Expired on")
@@ -202,12 +205,11 @@
 	(:h2 "What is this?")
 	(:p "This is a peer prediction market where you can bet on the (binary)
 		outcome of anything you want, such as the winner of the presidential
-		election, or who will win the next football match between Arsenal and
-		Tottenham Hotspur. It uses a peer-prediction mechanism to collect bets
-		and decide on their outcome based on reports from its userbase. This
-		opens up the types of bets that can be made since they do not have to
-		be specifically provided by a central moderator, and it is left to the
-		users to decide on their outcome.")
+		election, or the winner of some sports event. It uses a peer-prediction
+		mechanism to collect bets and decide on their outcome based on reports
+		from its userbase. This opens up the types of bets that can be made
+		since they do not have to be specifically provided by a central
+		moderator, and it is left to the users to decide on their outcome.")
 	
 	(:h2 "How do I use it?")
 	(:p "After registering, the dashboard will show all of the current markets.
@@ -215,31 +217,43 @@
 		while unresolved markets are those whose deadlines have passed but
 		still require users to report on the outcome of the bet.")
 
-	(:p "Any user is able to create their own market by simply providing a bet
-		and the deadline by which you believe the outcome will be realised. For
-		example, if betting on the outcome of a single football match, the bet
-		would be who wins and the deadline will be the time at which the match
-		finishes. Since other people will be reporting on what the outcome is,
-		you should try to make your bet as unambiguous as possible. After
-		creating the market it will then be possible to trade shares in it up
-		until the deadline.")
+	(:h3 "Creating markets")
+	(:p "You can create a market by entering a bet and a deadline by which the
+		outcome will have been realised. Since other users will need to report
+		on the outcome of the bet, they should be unambiguous \(though you are
+		free to make them as ambiguous as you like\) to might make it easier
+		for users to report the outcome when the event happens. The deadline
+		should also be chosen as the earliest date and time you expect the
+		outcome to be known \(knowable\), otherwise users may trade in the
+		market knowing the outcome.")
 
-	(:p "When there are markets listed under \"Unresolved Markets\", you can
-		report its outcome based on what you observed \(e.g. by reading the
-		news, watching the match, or otherwise hearing about it\). Since
-		reporting on a market helps the mechanism to work, you will be given a
-		small monetary reward for doing so. This incentivises users to act
-		truthfully, meaning users will be worse off if they lie in an attempt
-		to swing the outcome in their favour.")
+	(:h3 "Trading in markets")
+	(:p "Shares can be bought and sold in any of the markets listed under
+		\"Active Markets\" up until the market closes, with the only
+		restriction being that shares can only be bought when creating the
+		market \(otherwise you should just create a market for the opposite
+		outcome\). When the market expires and the outcome has been determined,
+		you will be paid for any shares you own in the market and you will need
+		to pay for any shares you are short. The payout of one share is the
+		proportion of users who reported a positive \('Yes'\) outcome for the
+		event.")
+	(:p "If you buy shares in a market, you are saying you believe the event
+		will have a positive outcome, since you expect people to report a
+		positive outcome and hence push the payout per share towards $1, and
+		hence you will receive $1 for each share you own. By similar reasoning,
+		when you sell shares you are predicting the opposite.")
+	(:p "As in any other market money can be made by buying low and selling
+		high -- you don't have to hold onto your shares right up until the
+		event occurs and risk a small payoff")
 
-	(:p "Once the outcome of the market has been peer-determined you will
-		receive a payout for any shares you hold in it. The payout-per-share is
-		the fraction of reporters that said that the outcome indeed occurred.
-		For example, if eight uers report a market as 'Yes' and two reporters
-		report a 'No', then for each share you own you will be paid 40p. This
-		works for short-selling shares as well, in which case you will need to
-		buy back that amount of shares at their payout price \(meaning ideally
-		0 reporters report a 'Yes' and hence all report 'No'\).")))
+	(:h3 "Resolving Markets")
+	(:p "Markets whose deadlines have passed are listed under \"Unresolved
+		Markets\". You can report its outcome based on your observation \(e.g.
+		reading the news, watching the match\) and you will be rewarded for
+		doing so.")
+	(:p "Once enough reports on the outcome have been received, the outcome of
+		the event and payoff for each share held will be the proportion of
+		reporters who reported a positive outcome.")))
 
 (define-url-fn
   (portfolio)
@@ -247,26 +261,53 @@
   (standard-page
 	(:title "Portfolio")
 	(:h1 "My Portfolio")
-	(:table
+
+	(:h2 "Active Markets")
+	(:table :class "striped"
 	  (:tr
 		(:th "Bet")
 		(:th "Deadline")
-		(:th "Current Price")
+		(:th "Position")
 		;; TODO: bought-at price
-		(:th "Shares"))
-	  (dolist (security (db:get-portfolio-securities (session-value 'session-user)))
+		(:th "Current Price"))
+	  (dolist (security (db:get-portfolio-active-securities (session-value 'session-user)
+															(local-time:now)))
 		(htm
 		  (:tr
 			(:td (fmt "~S" (db:security-bet security)))
 			(:td (pretty-datetime (db:security-deadline security)))
+			(:td :class "number" (fmt "~D" (db:get-current-position
+											 (session-value 'session-user)
+											 security)))
+			(:td :class "number"
+				 (format T "~4$" (msr:share-price (db:security-shares security))))
+
+			(:td (:form :action "trade-security" :method :POST
+						(:input :type :hidden :name "bet-id" :value (db:security-id security))
+						(:input :type :submit :value "Trade")))))))
+
+	(:h2 "History")
+	(:table :class "striped"
+	  (:tr
+		(:th "Bet")
+		(:th "Expired On")
+		(:th "Position")
+		(:th "Closing Price")
+		;; TODO: bought-at price
+		(:th "Payout per share"))
+	  (dolist (security (db:get-portfolio-expired-securities (session-value 'session-user)
+															 (local-time:now)))
+		(htm
+		  (:tr
+			(:td (fmt "~S" (db:security-bet security)))
+			(:td (pretty-datetime (db:security-deadline security)))
+			(:td :class "number" (fmt "~D" (db:get-current-position
+											 (session-value 'session-user)
+											 security)))
 			(:td :class "number"
 				 (format T "~4$" (msr:share-price (db:security-shares security))))
 			(:td :class "number"
-				 (fmt "~D" (db:get-current-position (session-value 'session-user)
-													security)))
-			(:td (:form :action "trade-security" :method :POST
-						(:input :type :hidden :name "bet-id" :value (db:security-id security))
-						(:input :type :submit :value "Trade")))))))))
+				 (format T "~4$" (db:security-outcome security)))))))))
 
 (define-url-fn
   (login)

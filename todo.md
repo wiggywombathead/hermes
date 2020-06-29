@@ -11,6 +11,7 @@
 	- [x] Remember to implement trading fees
   - [ ] Find a way to point "/" to "/index" (hunchentoot)
   - [x] Portfolio page
+    - [x] Trade from portfolio page
 
 - [ ] Database
   - [x] Set up Mito
@@ -26,7 +27,7 @@
   - [x] Ability to trade between agents
   - [ ] Trading fees
     - [x] Pay to central "bank"
-	- [ ] Fix liquidation transactions: no fee on liquidation but only _up to_
+	- [x] Fix liquidation transactions: no fee on liquidation but only _up to_
 	  the amount they liquidate (i.e. selling back all they own and then more,
 	  there should be a fee on the portion that they short)
   - [x] Where does the money go? Create entry in `user` table for the bank, and

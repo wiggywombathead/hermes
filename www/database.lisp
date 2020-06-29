@@ -58,8 +58,11 @@
 		   :get-unresolved-markets
 		   :report-market-outcome
 
-		   :get-portfolio
 		   :get-portfolio-securities
+		   :get-portfolio-active-securities
+		   :get-portfolio-expired-securities
+		   :get-portfolio
+
 		   :get-arbiter-reports
 		   :get-shareholder-shares))
 
@@ -279,6 +282,24 @@
 									  :on (:= :security.id :user-security.security-id))
 				(where (:and (:= :user-security.user-id (user-id user))
 							 (:!= :user-security.shares 0))))))
+
+(defun get-portfolio-active-securities (user date)
+  " return a list of all securities held by USER whose deadline has not passed "
+  (with-open-database
+	(select-dao 'security (inner-join 'user-security
+									  :on (:= :security.id :user-security.security-id))
+				(where (:and (:= :user-security.user-id (user-id user))
+							 (:!= :user-security.shares 0)
+							 (:>= :security.deadline date))))))
+
+(defun get-portfolio-expired-securities (user date)
+  " return a list of all securities held by USER whose deadline has passed "
+  (with-open-database
+	(select-dao 'security (inner-join 'user-security
+									  :on (:= :security.id :user-security.security-id))
+				(where (:and (:= :user-security.user-id (user-id user))
+							 (:!= :user-security.shares 0)
+							 (:< :security.deadline date))))))
 
 (defun get-portfolio (user)
   " return a list ((security shares) ...) of the number of shares owned for
