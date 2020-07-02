@@ -99,7 +99,9 @@
 		   (security :col-type security)
 		   (shares :col-type :integer
 				   :initform 0)
-		   (report :col-type (or :char :null))))
+		   (report :col-type (or :char :null))
+		   (positive-belief :col-type (or :double :null))
+		   (negative-belief :col-type (or :double :null))))
 
 ;;; Primary key accessors
 
@@ -232,9 +234,14 @@
   (with-open-database
 	(save-dao security)))
 
-(defun insert-user-security (user security &optional shares report)
+(defun insert-user-security
+  (user security &optional shares report positive-belief negative-belief)
   (with-open-database
-	(create-dao 'user-security :user user :security security :shares shares :report report)))
+	(create-dao 'user-security
+				:user user :security security
+				:shares shares :report report
+				:positive-belief positive-belief
+				:negative-belief negative-belief)))
 
 (defun user-security-exists? (user security)
   (with-open-database
@@ -261,19 +268,23 @@
   (update-budget *banker* (- amount))
   (update-budget user amount))
 
-(defun report-market-outcome (user security report)
+(defun report-market-outcome (user security report positive-belief negative-belief)
   " allow USER to submit a REPORT on the outcome of SECURITY "
   (with-open-database
 	(let ((portfolio-entry (find-dao 'user-security :user user :security security)))
 	  (if portfolio-entry
 		(progn
 		  (setf (slot-value portfolio-entry 'report) report)
+		  (setf (slot-value portfolio-entry 'positive-belief) positive-belief)
+		  (setf (slot-value portfolio-entry 'negative-belief) negative-belief)
 		  (save-dao portfolio-entry))
 		(create-dao 'user-security
 					:user user
 					:security security
 					:shares 0
-					:report report)))))
+					:report report
+					:positive-belief positive-belief
+					:negative-belief negative-belief)))))
 
 (defun get-portfolio-securities (user)
   " return a list of all securities held by USER "

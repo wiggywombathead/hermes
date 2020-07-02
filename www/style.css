@@ -1,36 +1,52 @@
 body {
 	font-family: "Merriweather", serif;
 	font-size: 12pt;
+	margin: auto;
+}
+
+.container {
+	width: 80%;
+	margin: 0 auto;
+	padding: 0;
+	background-color: #f6f6f6;
+}
+
+.content {
+	padding: 2%;
+	text-align: justify;
 }
 
 #navbar {
-	margin: 0
-}
-
-#navbar ul {
+	width: 100%;
 	list-style-type: none;
 	margin: 0;
 	padding: 0;
 	overflow: hidden;
 	background-color: #f3f3f3;
-	display: inline-block;
+	display: block;
 }
 
 #navbar li {
+	display: inline;
 	float: left;
 }
 
 #navbar li a, img {
-	display: block;
+	display: block;		/* entire block is clickable, not just text */
 	color: black;
 	text-align: center;
-	padding: 8px 10px;
+	padding: 16px;
 	text-decoration: none;
 	height: 1em;
 }
 
 #navbar li a:hover {
 	background-color: #d3d3d3;
+}
+
+#toolbar {
+	text-align: right;
+	background-color: #e3e3e3;
 }
 
 th, td {

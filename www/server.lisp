@@ -1,16 +1,18 @@
 ;;;; Webserver on which to host the prediction market
 
 ;; load the required packages
-(mapcar #'ql:quickload '(:cl-who :hunchentoot :parenscript :smackjack))
+(mapcar #'ql:quickload '(:cl-who :hunchentoot))
 
 (defpackage :srv
-  (:use :cl :cl-who :hunchentoot :parenscript :smackjack)
+  (:use :cl :cl-who :hunchentoot)
   (:export :start-server
 		   :stop-server))
 
 (in-package :srv)
 
 (load "database.lisp")
+(load "javascript.lisp")
+
 (load "msr.lisp")
 (load "market.lisp")
 (load "arbitration.lisp")
@@ -32,12 +34,13 @@
 		(make-instance 'easy-acceptor
 					   :name 'cassie
 					   :port *server-port*
-					   :document-root #p"/home/tom/compsci/masters/cs907/www/"))
+					   :document-root #p"/home/tom/compsci/masters/cs907/www/")))
 
-  (setf *ajax-processor*
-		(make-instance 'ajax-processor :server-uri "/ajax")))
-
-  ;(push (create-ajax-dispatcher *ajax-processor*) *dispatch-table*)) 
+  ;; TODO: add this back when I figure out how
+;  (setf *ajax-processor*
+;		(make-instance 'ajax-processor :server-uri "/ajax")))
+;
+;(push (create-ajax-dispatcher *ajax-processor*) *dispatch-table*)) 
 
 (defun start-server ()
   (start *web-server*))
@@ -61,30 +64,42 @@
 			  (:meta :http-equiv "Content-Type"
 					 :content "text/html;charset=utf-8")
 
+			  ;; fonts
 			  (:link :rel "stylesheet"
 					 :href "https://fonts.googleapis.com/css?family=Merriweather")
 
+			  ;; style
+			  ;(:link :rel "stylesheet" :href "https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" :integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" :crossorigin="anonymous"))
+
 			  (:link :type "text/css"
 					 :rel "stylesheet"
-					 :href "/style.css"))
+					 :href "/style.css")
+
+			  (:script :src "https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js")
+			  (:script :src "/ajax.js"))
 
 			(:body
-			  ; (:div :id "header" (:img :src "img/kappa.png" :alt "K") (:span
-			  ; :class "strapline" "Predict the future!"))
+			  (:ul :id "navbar"
+				   (:li (:img :src "img/kappa.png" :class "logo"))
+				   (:li (:a :href "index" "home"))
+				   (:li (:a :href "about" "about"))
+				   (if (session-value 'session-user)
+					 (htm
+					   (:li (:a :href "portfolio" "portfolio"))
+					   (:li (:a :href "logout-user" "logout")))
+					 (htm
+					   (:li (:a :href "login" "login")))))
 
-			  (:div :id "navbar"
-					(:ul
-					  (:li (:img :src "img/kappa.png" :class "logo"))
-					  (:li (:a :href "index" "home"))
-					  (:li (:a :href "about" "about"))
-					  (if (session-value 'session-user)
-						(htm
-						  (:li (:a :href "portfolio" "portfolio"))
-						  (:li (:a :href "logout-user" "logout")))
-						(htm
-						  (:li (:a :href "login" "login"))))))
+			  (:div :class "container"
+					(if (session-value 'session-user)
+					  (htm
+						(:div :id "toolbar"
+							  (format T "User: ~A Funds: ~4$"
+									  (db:user-name (session-value 'session-user))
+									  (db:user-budget (session-value 'session-user))))))
 
-			  ,@body))))
+					(:div :class "content"
+						  ,@body))))))
 
 (defmacro define-url-fn ((name) &body body)
   " creates handler NAME and pushes it to *DISPATCH-TABLE* "
@@ -100,41 +115,18 @@
 
 ;; TODO: point / to /index
 
-(defun make-nonempty-check (field)
-  `(equal (getprop ,field 'value) ""))
-
-(defun make-nonempty-list (fields)
-  (loop while fields
-		collecting (make-nonempty-check (pop fields))))
-
-(defmacro js-ensure-nonempty (msg &rest fields)
-  `(ps-inline
-	 (when (or ,@(make-nonempty-list fields))
-	   (if (equal ,msg "")
-		 (alert "Please fill in all required fields")
-		 (alert ,msg))
-	   (return false))))
-
 ;;; Start the server
 (init-server)
 
 (defun pretty-datetime (datetime)
-  (local-time:format-timestring T datetime
-								:format '((:hour 2)":"(:min 2)" "(:day 2)"-"(:month 2)"-":year)))
+  (local-time:format-timestring
+	T datetime :format '((:hour 2)":"(:min 2)" "(:day 2)"-"(:month 2)"-":year)))
 
 (define-url-fn
   (index)
   (start-session)
   (standard-page
 	(:title "Cassie")
-
-	(:h1 "Welcome")
-	(:h2 (format T "~A"
-				 (if (session-value 'session-user)
-				   (format NIL "Hello ~A! Funds: ~4$"
-						   (db:user-name (session-value 'session-user))
-						   (db:user-budget (session-value 'session-user)))
-				   "")))
 
 	(:h2 "Active Markets")
 	(:table :class "striped"
@@ -148,7 +140,8 @@
 				(:tr
 				  (:td (format T "~S" (db:security-bet s)))
 				  (:td (pretty-datetime (db:security-deadline s)))
-				  (:td :class "number" (format T "~4$" (msr:share-price (db:security-shares s))))
+				  (:td :class "number"
+					   (format T "~4$" (msr:share-price (db:security-shares s))))
 				  (if (session-value 'session-user)
 					(htm
 					  (:td (:form :action "trade-security" :method "POST"
@@ -184,7 +177,7 @@
 		(:h2 "Create a Market")
 		(:div :id "market-maker"
 			  (:form :action "create-market" :method "POST"
-					 :onsubmit (js-ensure-nonempty "" bet deadline_date)
+					 :onsubmit (js:nonempty-fields "" bet deadline_date)
 					 (:table
 					   (:tr
 						 (:td "Bet")
@@ -203,29 +196,34 @@
 	(:h1 "About")
 
 	(:h2 "What is this?")
-	(:p "This is a peer prediction market where you can bet on the (binary)
-		outcome of anything you want, such as the winner of the presidential
-		election, or the winner of some sports event. It uses a peer-prediction
-		mechanism to collect bets and decide on their outcome based on reports
-		from its userbase. This opens up the types of bets that can be made
-		since they do not have to be specifically provided by a central
-		moderator, and it is left to the users to decide on their outcome.")
+	(:p "This is a peer prediction market. You can bet on the outcome of any
+		\(binary\) event you want, such as the winner of some sports event, or
+		whether or not the next US president will be a Democrat.")
+
+;;	(:p "This is a peer prediction market where you can bet on the (binary)
+;;		outcome of anything you want, such as the winner of the presidential
+;;		election, or the winner of some sports event. It uses a peer-prediction
+;;		mechanism to collect bets and decide on their outcome based on reports
+;;		from its userbase. This opens up the types of bets that can be made
+;;		since they do not have to be specifically provided by a central
+;;		moderator, and it is left to the users to decide on their outcome.")
 	
 	(:h2 "How do I use it?")
-	(:p "After registering, the dashboard will show all of the current markets.
-		Active markets are those where shares can still be bought and sold,
-		while unresolved markets are those whose deadlines have passed but
-		still require users to report on the outcome of the bet.")
+	(:p "First you need to register. Then, your dashboard will show all of the
+		current markets. Active markets are those whose deadlines have not
+		passed and shares can still be bought and sold. Unresolved markets are
+		those whose deadlines have passed and require users to report the
+		outcome of the event.")
 
 	(:h3 "Creating markets")
-	(:p "You can create a market by entering a bet and a deadline by which the
-		outcome will have been realised. Since other users will need to report
-		on the outcome of the bet, they should be unambiguous \(though you are
-		free to make them as ambiguous as you like\) to might make it easier
-		for users to report the outcome when the event happens. The deadline
-		should also be chosen as the earliest date and time you expect the
-		outcome to be known \(knowable\), otherwise users may trade in the
-		market knowing the outcome.")
+	(:p "Create a market by entering a bet and a deadline by which the outcome
+		will be known. Other users will need to report their observation of the
+		outcome, so bets should be made as unambiguous as possible to minimise
+		the opportunity for users to interpret it differently. You are free to
+		make bets as unambiguous as you like, though this may affect the final
+		payout. The deadline should also be the earliest date and time you
+		expect the event to have occurred, to prevent other users trading in a
+		market whose outcome is known.")
 
 	(:h3 "Trading in markets")
 	(:p "Shares can be bought and sold in any of the markets listed under
@@ -244,7 +242,7 @@
 		when you sell shares you are predicting the opposite.")
 	(:p "As in any other market money can be made by buying low and selling
 		high -- you don't have to hold onto your shares right up until the
-		event occurs and risk a small payoff")
+		event occurs and risk a small payoff.")
 
 	(:h3 "Resolving Markets")
 	(:p "Markets whose deadlines have passed are listed under \"Unresolved
@@ -368,7 +366,7 @@
 	  (:title "Create Market")
 	  (:h1 "Create Position")
 	  (:form :action "first-dibs" :method "POST"
-			 :onsubmit (js-ensure-nonempty "Quantity cannot be empty" shares)
+			 :onsubmit (js:nonempty-fields "Quantity cannot be empty" shares)
 			 (:table
 			   (:tr
 				 (:td "Market")
@@ -386,7 +384,7 @@
 				 (:td (:input :type "number" :min 1 :value 1 :name "shares"))
 				 (:td "shares"))
 			   (:tr
-				 (:td "Exposure")
+				 (:td "Projected Cost")
 				 (:td (:b "TODO (update asynchronously)")))
 			   (:tr
 				 (:td :colspan 3
@@ -398,7 +396,7 @@
   (standard-page
 	(:title "Transaction")
 
-	(:h1 "Transaction successful")
+	(:h1 "Transaction summary")
 
 	(let ((bet (parameter "bet"))
 		  (deadline (parameter "deadline"))
@@ -433,7 +431,6 @@
 		  shares))
 
 	  (htm
-		(:h2 "Summary")
 		(:table
 		  (:tr
 			(:td "Market")
@@ -473,7 +470,7 @@
 	  (htm
 		(:h1 "Trade")
 		(:form :action "buy-or-sell-security" :method "POST"
-			   :onsubmit (js-ensure-nonempty "Quantity cannot be empty" shares buying)
+			   :onsubmit (js:nonempty-fields "Quantity cannot be empty" shares buying)
 			   (:table
 				 (:input :type :hidden :name "bet-id" :value id)
 
@@ -600,12 +597,19 @@
 	(:h1 "Resolve Security")
 
 	(let ((id (parameter "bet-id"))
+		  closing-price
+		  mu1-min
+		  mu0-max
 		  security)
 
 	  (setf security (db:get-security-by-id id))
+	  (setf closing-price (msr:share-price (db:security-shares security)))
+	  (setf mu1-min (ceiling (* 100 closing-price)))
+	  (setf mu0-max (1- mu1-min))
 
 	  (htm
 		(:form :action "report-security" :method "POST"
+			   :onsubmit (js:nonempty-fields "" positive_belief negative_belief)
 			   (:input :type :hidden :name "id" :value id)
 			   (:table
 				 (:tr
@@ -616,8 +620,26 @@
 				   (:td (pretty-datetime (db:security-deadline security))))
 				 (:tr
 				   (:th "Market Outcome")
-				   (:td (:input :type :radio :name "report" :value 1) "Yes"
-						(:input :type :radio :name "report" :value 0) "No"))
+				   (:td (:input :type :radio :value 1 :checked "checked"
+								:name "report") "Yes"
+						(:input :type :radio :value 0
+								:name "report") "No"))
+				 (:tr
+				   (:th "Positive Belief")
+				   (:td (:input :type :number
+								:step 1
+								:min mu1-min
+								:max 100
+								:value mu1-min
+								:name "positive_belief") "%"))
+				 (:tr
+				   (:th "Negative Belief")
+				   (:td (:input :type :number
+								:step 1
+								:min 0
+								:max mu0-max
+								:value mu0-max
+								:name "negative_belief") "%"))
 				 (:tr
 				   (:td :colspan 2
 						(:input :type :submit :value "Submit")))))))))
@@ -627,12 +649,14 @@
   (start-session)
   (let ((id (parameter "id"))
 		(report (parameter "report"))
+		(positive-belief (/ (parse-integer (parameter "positive_belief")) 100))
+		(negative-belief (/ (parse-integer (parameter "negative_belief")) 100))
 		(session-user (session-value 'session-user))
 		security)
 
 	(setf security (db:get-security-by-id id))
+	(db:report-market-outcome session-user security report positive-belief negative-belief))
 
-	(db:report-market-outcome session-user security report))
   (redirect "/index"))
 
 (define-url-fn

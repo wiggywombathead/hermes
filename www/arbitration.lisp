@@ -6,7 +6,9 @@
 
 (defpackage :arb
   (:use :cl :util)
-  (:export :one-over-prior))
+  (:export :one-over-prior
+		   :one-over-prior-midpoint
+		   :i-posterior))
 
 (in-package :arb)
 
@@ -38,3 +40,27 @@
   (one-over-prior report-i
 				  report-j
 				  (/ (+ mu-1 mu-0) 2)))
+
+(defun i-posterior
+  (prior positive-belief-i negative-belief-i positive-belief-j negative-belief-j)
+  " calculate the probability according to i's belief model that, given that
+  user i has received a positive signal, another randomly chosen user j also
+  received a positive signal "
+  (let ((i1x0 negative-belief-i)	; Pr[Si=1|X=0]
+		(i1x1 positive-belief-i)	; Pr[Si=1|X=1]
+		(j1x0 negative-belief-j)	; Pr[Sj=1|X=0]
+		(j1x1 positive-belief-j)	; Pr[Sj=1|X=1]
+		i1		; Pr[Si=1]
+		x0i1	; Pr[X=0|Si=1]
+		x1i1)	; Pr[X=1|Si=1] = 1 - Pr[X=0|Si=1]
+
+	;; Pr[s=1]
+	(setf i1 (+ (* i1x1 prior) (* i1x0 (- 1 prior))))
+
+	;; Pr[X=1|s=1]
+	(setf x1i1 (/ (* i1x1 prior) i1))
+
+	;; Pr[X=0|s=1]
+	(setf x0i1 (- 1 x1i1))
+
+	(+ (* j1x0 x0i1) (* j1x1 x1i1))))
