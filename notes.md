@@ -179,3 +179,39 @@ the user reports? Some ideas:
 Regarding the second, what if after a certain time no-one has opted in? Also,
 the idea of a threshold can be manipulated, which is what we want to avoid.
 Leaning towards the second at the moment as it keeps results coming quickly.
+
+## 30/06/2020
+Some links that I might need to reference in future write-ups:
+- [Lisp Cookbook (Web Development)][lisp-webdev]
+- [Lisp Cookbook (Mito)][mito-cookbook]
+- [Mito Reference Manual][mito-refman]
+- [Hunchentoot][hunchentoot-1]
+- [Parenscript Reference Manual][parenscript-refman]
+- [CL-WHO macros][cl-who-macros]
+- [Practical Common Lisp][gigamonkeys]
+- [Lisp for the Web][lisp-for-web]
+- [Lisp Machine Manual][lisp-machine-manual]
+- [SXQL Reference Manual][sxql-refman]
+- [Javascript with a Lisp][javascript-with-lisp]
+- [AJAX in Lisp][ajax-lisp]
+
+[lisp-webdev]: https://lispcookbook.github.io/cl-cookbook/web.html
+[mito-cookbook]: https://lispcookbook.github.io/cl-cookbook/databases.html
+[mito-refman]: https://quickref.common-lisp.net/mito.html
+[hunchentoot-1]: https://lisp-journey.gitlab.io/blog/web-development-in-common-lisp/
+[parenscript-refman]: https://common-lisp.net/project/parenscript/reference.html
+[cl-who-macros]: http://lisp-univ-etc.blogspot.com/2009/03/cl-who-macros.html
+[gigamonkeys]: http://www.gigamonkeys.com/book/
+[lisp-for-web]: https://www.adamtornhill.com/articles/lispweb.htm
+[lisp-machine-manual]: https://hanshuebner.github.io/lmman/frontpage.html
+[sxql-refman]: https://quickref.common-lisp.net/sxql.html
+[javascript-with-lisp]: http://langnostic.inaimathi.ca/posts/javascript-with-a-lisp
+[ajax-lisp]: https://blog.jeaye.com/2015/09/27/parenscript-ajax/
+
+## 05/07/2020
+Hashtables with string keys require you to specify `equal` as the test,
+according to [this
+Stackoverflow](https://stackoverflow.com/questions/1409069/using-string-object-as-a-hash-key-in-common-lisp). 
+
+Got the one-over-midpoint-with-prior working properly today. Didn't need that
+hashmap thing in the end -- just indexed by arbiter ID instead.

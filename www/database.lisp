@@ -64,6 +64,7 @@
 		   :get-portfolio
 
 		   :get-arbiter-reports
+		   :get-arbiter-beliefs
 		   :get-shareholder-shares))
 
 (in-package :db)
@@ -339,7 +340,6 @@
   the outcome of SECURITY"
   (let ((arbiters (get-arbiters security))
 		reports)
-
 	(dolist (arbiter arbiters)
 	  (with-open-database
 		(let ((report (parse-integer (user-security-report
@@ -348,6 +348,24 @@
 												 :security security)))))
 		  (push (list arbiter report) reports))))
 	reports))
+
+(defun get-arbiter-beliefs (security)
+  " return a list ((arbiter positive-belief negative-belief) ...) of the
+  arbiters and their signal beliefs on SECURITY "
+  (let ((arbiters (get-arbiters security))
+		beliefs)
+	(dolist (arbiter arbiters)
+	  (with-open-database
+		(let ((positive (user-security-positive-belief
+						  (find-dao 'user-security
+									:user arbiter
+									:security security)))
+			  (negative (user-security-negative-belief
+						  (find-dao 'user-security
+									:user arbiter
+									:security security))))
+		  (push (list arbiter positive negative) beliefs))))
+	beliefs))
 
 (defun get-shareholders (security)
   " get all users who hold non-zero shares of SECURITY "

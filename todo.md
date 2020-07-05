@@ -39,10 +39,12 @@
   - [ ] Separate into own interface to clean up
 
 - [ ] Arbitration
-  - [ ] 1/prior midpoint mechanism
+  - [x] 1/prior midpoint mechanism
     - [x] Retrieve closing price and use as prior signal probability `mu`
+  - [x] 1/prior with midpoint mechanism
+    - [ ] Is there a more subtle way to ask for signal priors?
   - [ ] How to get arbitrators?
-    - [ ] Anyone can arbitrate: deal with odd number of arbiters
+    - [x] Anyone can arbitrate: deal with odd number of arbiters
 	- [ ] Arbiters randomly (pre-?) selected: how long to wait
 
 - [ ] Documentation
@@ -51,7 +53,8 @@
   - [ ] Interim Report
 
 - [ ] General fixes
-  - [ ] Get rid of annoying `returning from unknown block nilBlock warning
+  - [ ] Get rid of annoying `returning from unknown block nilBlock warning from
+	Parenscript
   - [x] Make macro for Parenscript ensuring fields are nonempty
   - [ ] Find a (better?) way to remove `d0` from LISP doubles when inserting
 	into database

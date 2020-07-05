@@ -177,7 +177,7 @@
 		(:h2 "Create a Market")
 		(:div :id "market-maker"
 			  (:form :action "create-market" :method "POST"
-					 :onsubmit (js:nonempty-fields "" bet deadline_date)
+					 ;:onsubmit (js:nonempty-fields "" bet deadline_date)
 					 (:table
 					   (:tr
 						 (:td "Bet")
@@ -366,7 +366,7 @@
 	  (:title "Create Market")
 	  (:h1 "Create Position")
 	  (:form :action "first-dibs" :method "POST"
-			 :onsubmit (js:nonempty-fields "Quantity cannot be empty" shares)
+			 ;:onsubmit (js:nonempty-fields "Quantity cannot be empty" shares)
 			 (:table
 			   (:tr
 				 (:td "Market")
@@ -470,7 +470,7 @@
 	  (htm
 		(:h1 "Trade")
 		(:form :action "buy-or-sell-security" :method "POST"
-			   :onsubmit (js:nonempty-fields "Quantity cannot be empty" shares buying)
+			   ;:onsubmit (js:nonempty-fields "Quantity cannot be empty" shares buying)
 			   (:table
 				 (:input :type :hidden :name "bet-id" :value id)
 
@@ -609,7 +609,7 @@
 
 	  (htm
 		(:form :action "report-security" :method "POST"
-			   :onsubmit (js:nonempty-fields "" positive_belief negative_belief)
+			   ;:onsubmit (js:nonempty-fields "" positive_belief negative_belief)
 			   (:input :type :hidden :name "id" :value id)
 			   (:table
 				 (:tr
@@ -666,10 +666,15 @@
   (let ((id (parameter "bet-id"))
 		security	
 		mu			; prior probability that an agent receives +ve signal
+		mu1
+		mu0
 		arbiter-reports
 		(reports-table (make-hash-table))
-		arbiters	; just the list of arbiters
-		reports		; just the list of reports
+		arbiter-beliefs
+		(beliefs-table (make-hash-table))
+		positive-posteriors	; list of posteriors Pr[Sj=1|Si=1]
+		negative-posteriors	; list of posteriors Pr[Sj=1|Si=0]
+		arbiters			; just the list of arbiters
 		pairs
 		outcome)
 
@@ -677,6 +682,7 @@
 	(setf mu (msr:share-price (db:security-shares security)))
 
 	(setf arbiter-reports (db:get-arbiter-reports security))
+	(setf arbiter-beliefs (db:get-arbiter-beliefs security))
 
 	;; if there are an odd number of reports, randomly remove one
 	(if (oddp (length arbiter-reports))
@@ -689,14 +695,22 @@
 	  (redirect "/index"))
 
 	;; convert list of tuples ((user report) ...) into hashmap
+	;; reports-table[user-name] = report
 	(dolist (arbiter-report arbiter-reports)
-	  (setf (gethash (first arbiter-report) reports-table) (second arbiter-report)))
+	  (setf (gethash (db:user-id (first arbiter-report)) reports-table)
+			(second arbiter-report)))
+
+	;; convert list ((user positive negative) ...) into hashmap
+	;; beliefs-table[user-name] = (positive negative)
+	(dolist (arbiter-belief arbiter-beliefs)
+	  (setf (gethash (db:user-id (first arbiter-belief)) beliefs-table)
+			(rest arbiter-belief)))
 
 	(setf arbiters (mapcar #'first arbiter-reports))
-	(setf reports (mapcar #'second arbiter-reports))
 
-	;; the payoff of each share held is the fraction of arbiters reporting 1
-	(setf outcome (float (/ (count 1 reports) (length reports))))
+	(let ((reports (mapcar #'second arbiter-reports)))
+	  ;; the payoff of each share held is the fraction of arbiters reporting 1
+	  (setf outcome (float (/ (count 1 reports) (length reports)))))
 
 	;; set the payoff for each share held in the database
 	(db:set-security-outcome security outcome)
@@ -709,7 +723,7 @@
 		(setf shareholder (first shareholder-share))
 		(setf shares (second shareholder-share))
 
-		(format T "Paying ~A ~D*~4$=~4$ for ~D shares of ~A"
+		(format T "Paying ~A ~D*~4$=~4$ for ~D shares of ~A~%"
 				(db:user-name shareholder)
 				shares
 				outcome
@@ -722,34 +736,105 @@
 	;; pair arbiters randomly
 	(setf pairs (util:random-pairing arbiters))
 
+	;; for each pair:
+	;;	- retrieve their report
+	;;  - compute their signal (positive/negtive) posterior beliefs
+	;; compute signal positive posterior mu1 and signal negative posterior mu0
+	;;  - mu1: Pr[Sj=1|Si=1]
+	;;	- mu0: Pr[Sj=1|Si=0]
+
+	;; TODO: move this to separate function/interface!!
+	(dolist (pair pairs)
+	  (let ((i (first pair))
+			(j (second pair))
+			id-i
+			id-j
+			report-i
+			report-j
+			positive-belief-i
+			negative-belief-i
+			positive-belief-j
+			negative-belief-j)
+
+		(setf id-i (db:user-id i))
+		(setf id-j (db:user-id j))
+
+		(setf report-i (gethash id-i reports-table))
+		(setf report-j (gethash id-j reports-table))
+
+		(setf positive-belief-i (first (gethash id-i beliefs-table)))
+		(setf negative-belief-i (second (gethash id-i beliefs-table)))
+		(setf positive-belief-j (first (gethash id-j beliefs-table)))
+		(setf negative-belief-j (second (gethash id-j beliefs-table)))
+
+		;; signal positive posterior for player i
+		(push (arb:signal-positive-posterior-i
+				mu
+				positive-belief-i negative-belief-i
+				positive-belief-j negative-belief-j)
+			  positive-posteriors)
+
+		;; signal positive posterior for player j
+		(push (arb:signal-positive-posterior-i
+				mu
+				positive-belief-j negative-belief-j
+				positive-belief-i negative-belief-i)
+			  positive-posteriors)
+
+		;; signal negative posterior for player i
+		(push (arb:signal-negative-posterior-i
+				mu
+				positive-belief-i negative-belief-i
+				positive-belief-j negative-belief-j)
+			  negative-posteriors)
+
+		;; signal negative posterior for player j
+		(push (arb:signal-negative-posterior-i
+				mu
+				positive-belief-j negative-belief-j
+				positive-belief-i negative-belief-i)
+			  negative-posteriors)))
+
+	(setf mu1 (arb:calculate-mu1 positive-posteriors))
+	(setf mu0 (arb:calculate-mu0 negative-posteriors))
+
 	(standard-page
 	  (:title "One-Over-Prior Payment")
-
-	  (:p (format T "Closing share price: ~4$" mu))
 
 	  (dolist (pair pairs)
 		(let ((i (first pair))
 			  (j (second pair))
+			  id-i
+			  id-j
 			  report-i
 			  report-j
-			  payment)
+			  arbiter-payment)
 
-		  (setf report-i (gethash i reports-table))
-		  (setf report-j (gethash j reports-table))
+		  (setf id-i (db:user-id i))
+		  (setf id-j (db:user-id j))
 
-		  ;; TODO: finish/verify
-		  (setf payment (arb:one-over-prior report-i report-j mu))
+		  (setf report-i (gethash id-i reports-table))
+		  (setf report-j (gethash id-j reports-table))
+
+		  (setf arbiter-payment (arb:one-over-prior-midpoint
+								  report-i
+								  report-j
+								  mu1
+								  mu0))
 
 		  ;; pay the arbiters
-		  (db:bank-pay i payment)
-		  (db:bank-pay j payment)
+		  (db:bank-pay i arbiter-payment)
+		  (db:bank-pay j arbiter-payment)
 
 		  (htm
+			(:p (format T "Closing share price: ~4$" mu))
+			(:p (format T "mu1: ~D, mu0: ~D" mu1 mu0))
 			(:p (format T "~A reported ~D, ~A reported ~D"
 						(db:user-name i)
 						report-i
 						(db:user-name j)
 						report-j))
-			(:p (format T "Paying arbiters: ~4$" payment)))))
-	  
+
+			(:p (format T "Paying arbiters: ~4$" arbiter-payment)))))
+
 	  (:a :href "/index" :class "button" "Return to dashboard"))))
