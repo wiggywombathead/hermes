@@ -209,7 +209,7 @@
 ;;		moderator, and it is left to the users to decide on their outcome.")
 	
 	(:h2 "How do I use it?")
-	(:p "First you need to register. Then, your dashboard will show all of the
+	(:p "First you need to register. The dashboard will then show all of the
 		current markets. Active markets are those whose deadlines have not
 		passed and shares can still be bought and sold. Unresolved markets are
 		those whose deadlines have passed and require users to report the
@@ -217,38 +217,45 @@
 
 	(:h3 "Creating markets")
 	(:p "Create a market by entering a bet and a deadline by which the outcome
-		will be known. Other users will need to report their observation of the
-		outcome, so bets should be made as unambiguous as possible to minimise
-		the opportunity for users to interpret it differently. You are free to
-		make bets as unambiguous as you like, though this may affect the final
-		payout. The deadline should also be the earliest date and time you
-		expect the event to have occurred, to prevent other users trading in a
-		market whose outcome is known.")
+		will be known. You are free to make any bet you like, but since other
+		users will report on the bet's outcome it is a good to make it
+		unambiguous to minimise the chance of misunderstanding. The deadline
+		should be the earliest time at which the outcome for the event can be
+		determined -- this prevents users trading in a market whose outcome
+		they know.")
 
 	(:h3 "Trading in markets")
 	(:p "Shares can be bought and sold in any of the markets listed under
-		\"Active Markets\" up until the market closes, with the only
-		restriction being that shares can only be bought when creating the
-		market \(otherwise you should just create a market for the opposite
-		outcome\). When the market expires and the outcome has been determined,
-		you will be paid for any shares you own in the market and you will need
-		to pay for any shares you are short. The payout of one share is the
-		proportion of users who reported a positive \('Yes'\) outcome for the
-		event.")
+		\"Active Markets\" up until the market closes. Note that you can only
+		buy shars when creating a market, otherwise you would just create a
+		market for the opposite outcome. When the market expires and the
+		outcome has been determined, you will be paid for any shares you own
+		and you will need to pay for any shares you are short. The payout of
+		one share is the proportion of users who reported a positive \('Yes'\)
+		outcome for the event.")
+
 	(:p "If you buy shares in a market, you are saying you believe the event
-		will have a positive outcome, since you expect people to report a
-		positive outcome and hence push the payout per share towards $1, and
-		hence you will receive $1 for each share you own. By similar reasoning,
-		when you sell shares you are predicting the opposite.")
+		will happen, since you expect people to report a positive outcome and
+		hence the payout per share will tend towards $1. Similarly, when you
+		sell shares you are predicting the opposite.")
+
 	(:p "As in any other market money can be made by buying low and selling
-		high -- you don't have to hold onto your shares right up until the
-		event occurs and risk a small payoff.")
+		high, meaning you don't have to hold onto your shares right up to the
+		deadline. Note that we have trading fees to raise funds to pay users
+		their winnings.")
 
 	(:h3 "Resolving Markets")
 	(:p "Markets whose deadlines have passed are listed under \"Unresolved
 		Markets\". You can report its outcome based on your observation \(e.g.
-		reading the news, watching the match\) and you will be rewarded for
-		doing so.")
+		reading the news, watching the match\) and you will receive a small
+		reward for doing so.")
+
+	(:p "There are two additional values to submit: \"Positive belief\" and
+		\"Negative belief\". These are your estimations of the probability that
+		you received a positive signal given that the outcome was positive, and
+		the probability that you received a positive outcome given that the
+		outcome was negative.")
+
 	(:p "Once enough reports on the outcome have been received, the outcome of
 		the event and payoff for each share held will be the proportion of
 		reporters who reported a positive outcome.")))
