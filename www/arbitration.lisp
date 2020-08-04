@@ -10,30 +10,35 @@
 		   :one-over-prior-midpoint
 		   :signal-positive-posterior-i
 		   :signal-negative-posterior-i
+		   :calculate-k
 		   :calculate-mu1
 		   :calculate-mu0))
 
 (in-package :arb)
 
-(defconstant +k+ 10)
-
 (defun pair-arbiters (arbiters)
   (random-pairing arbiters))
+
+(defun calculate-k (n-i m delta)
+  " compute one-over-prior parameter K for arbiter with N-I shares of given
+  security for which there are M arbiters and update strength (mu1-mu0) is
+  DELTA "
+  (/ (* 2 (abs n-i)) (* m delta)))
 
 ;; one-over-prior:
 ;;	- k * mu		if xi = xj = 0
 ;;	- k * (1 - mu)	if xi = xj = 1
 ;;	- 0				otherwise
-(defun one-over-prior (report-i report-j mu)
+(defun one-over-prior (report-i report-j k mu)
   " calculate payment for agent I and J according to their reports and the
   prior probability MU of receiving a positive signal "
   (if (= report-i report-j)
 	(if (= report-i 0)
-	  (* +k+ mu)
-	  (* +k+ (- 1 mu)))
+	  (* k mu)
+	  (* k (- 1 mu)))
 	0))
 
-(defun one-over-prior-midpoint (report-i report-j mu1 mu0)
+(defun one-over-prior-midpoint (report-i report-j k mu1 mu0)
   " calculate payment for agent I and J according to their reports using the
   one-over-prior-with-midpoint mechanism
   MU-1: probability that, given agent i receives positive signal, another
@@ -42,6 +47,7 @@
   randomly chosen agent receives positive signal "
   (one-over-prior report-i
 				  report-j
+				  k
 				  (/ (+ mu1 mu0) 2)))
 
 (defun signal-positive-posterior-i

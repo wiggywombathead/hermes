@@ -675,6 +675,9 @@
 		mu			; prior probability that an agent receives +ve signal
 		mu1
 		mu0
+		delta
+		k
+		m			; number of arbiters
 		arbiter-reports
 		(reports-table (make-hash-table))
 		arbiter-beliefs
@@ -743,7 +746,7 @@
 	;; pair arbiters randomly
 	(setf pairs (util:random-pairing arbiters))
 
-	;; for each pair:
+	;; for each random pair of arbiters:
 	;;	- retrieve their report
 	;;  - compute their signal (positive/negtive) posterior beliefs
 	;; compute signal positive posterior mu1 and signal negative posterior mu0
@@ -805,6 +808,16 @@
 	(setf mu1 (arb:calculate-mu1 positive-posteriors))
 	(setf mu0 (arb:calculate-mu0 negative-posteriors))
 
+	(setf delta (- mu1 mu0))
+	(setf m (length arbiters))
+
+	;; set 1/prior parameter K as max needed among all arbiters
+	(setf k (apply #'max (loop for i in arbiters collect 
+							   (arb:calculate-k
+								 (db:get-current-position i security)
+								 m
+								 delta))))
+
 	(standard-page
 	  (:title "One-Over-Prior Payment")
 
@@ -826,6 +839,7 @@
 		  (setf arbiter-payment (arb:one-over-prior-midpoint
 								  report-i
 								  report-j
+								  k
 								  mu1
 								  mu0))
 
@@ -836,6 +850,7 @@
 		  (htm
 			(:p (format T "Closing share price: ~4$" mu))
 			(:p (format T "mu1: ~D, mu0: ~D" mu1 mu0))
+			(:p (format T "delta=~D, k=~D" delta k))
 			(:p (format T "~A reported ~D, ~A reported ~D"
 						(db:user-name i)
 						report-i

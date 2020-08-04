@@ -63,6 +63,7 @@
 		   :get-portfolio-expired-securities
 		   :get-portfolio
 
+		   :get-num-reports
 		   :get-arbiter-reports
 		   :get-arbiter-beliefs
 		   :get-shareholder-shares))
@@ -334,6 +335,9 @@
 	(select-dao 'user (inner-join 'user-security :on (:= :user.id :user-security.user-id))
 				(where (:and (:= :user-security.security-id (security-id security))
 							 (:not-null :user-security.report))))))
+
+(defun get-num-reports (security)
+  (length (get-arbiters security)))
 
 (defun get-arbiter-reports (security)
   " return a list ((arbiter report) ...) of the arbiters and their report on
