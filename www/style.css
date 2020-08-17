@@ -61,3 +61,7 @@ th.number, td.number {
 table.striped tr:nth-child(odd) {
 	background-color: #f2f2f2;
 }
+
+.required {
+	background-color: #fffc9c;
+}

@@ -1,4 +1,10 @@
 # TODO
+- [ ] Final features
+  - [ ] Rewrite javascript using Parenscript
+  - [ ] Automated closing of markets (when all arbiters have reported)
+  - [ ] Gather signal priors from reporting history (not asking explicitly)
+  - [x] Compute k correctly
+
 - [ ] Website
   - [x] Basic pages in Hunchentoot
   - [ ] User interface
@@ -42,15 +48,15 @@
   - [x] 1/prior midpoint mechanism
     - [x] Retrieve closing price and use as prior signal probability `mu`
   - [x] 1/prior with midpoint mechanism
-    - [ ] Is there a more subtle way to ask for signal priors?
+    - [ ] compute signal priors using history rather than ask for explicitly
   - [ ] How to get arbitrators?
-    - [x] Anyone can arbitrate: deal with odd number of arbiters
-	- [ ] Arbiters randomly (pre-?) selected: how long to wait
+    - [x] ~~Anyone can arbitrate: deal with odd number of arbiters~~ **MUST NOT BE ABLE TO OPT IN**
+	- [ ] Arbiters randomly (pre-?) selected: how long to wait for response
 
 - [ ] Documentation
   - [ ] Development diary notes
   - [x] Presentation
-  - [ ] Interim Report
+  - [x] Interim Report
 
 - [ ] General fixes
   - [ ] Get rid of annoying `returning from unknown block nilBlock warning from

@@ -1,10 +1,10 @@
 ;;;; Webserver on which to host the prediction market
 
 ;; load the required packages
-(mapcar #'ql:quickload '(:cl-who :hunchentoot))
+(mapcar #'ql:quickload '(:cl-who :hunchentoot :parenscript :smackjack))
 
 (defpackage :srv
-  (:use :cl :cl-who :hunchentoot)
+  (:use :cl :cl-who :hunchentoot :parenscript :smackjack)
   (:export :start-server
 		   :stop-server))
 
@@ -34,13 +34,10 @@
 		(make-instance 'easy-acceptor
 					   :name 'cassie
 					   :port *server-port*
-					   :document-root #p"/home/tom/compsci/masters/cs907/www/")))
+					   :document-root #p"/home/tom/compsci/masters/cs907/www/"))
 
-  ;; TODO: add this back when I figure out how
-;  (setf *ajax-processor*
-;		(make-instance 'ajax-processor :server-uri "/ajax")))
-;
-;(push (create-ajax-dispatcher *ajax-processor*) *dispatch-table*)) 
+  (setf *ajax-processor*
+		(make-instance 'ajax-processor :server-uri "/ajax")))
 
 (defun start-server ()
   (start *web-server*))
@@ -68,15 +65,48 @@
 			  (:link :rel "stylesheet"
 					 :href "https://fonts.googleapis.com/css?family=Merriweather")
 
+			  (str (generate-prologue *ajax-processor*))
+
+			  (:script :src "https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"))
+			  ;(:script :src "/ajax.js"))
+
+			  (:script :type "text/javascript"
+					   "
+					   function jsonCost(response) {
+					   document.getElementById('projected').innerHTML = response.cost;
+					   }
+					   function ajaxTransactionCost() {
+					   smackjack.ajaxTransactionCost(document.getElementById('new-shares').value,
+					    							  document.getElementById('old-shares').value,
+					    							  jsonCost);
+					   }
+					   ")
+			;  (:script :type "text/javascript"
+			;		   (ps
+			;			 (defun json-cost (response)
+			;			   (alert (@ response cost)))
+
+			;			 (defun ajax-transaction-cost ()
+			;			   (chain smackjack (ajax-transaction-cost
+			;								  (chain document (get-element-by-id :new-shares) value)
+			;								  (chain document (get-element-by-id :old-shares) value)
+			;								  json-cost)))
+
+			;			 (defun json-price (response)
+			;			   (with-slots (shares price) response
+			;				 (alert (+ "p(" shares ")=" price))))
+
+			;			 (defun ajax-share-price ()
+			;			   (chain smackjack (ajax-share-price
+			;								  (chain (get-element-by-id :shares) value)
+			;								  json-price)))
+
 			  ;; style
 			  ;(:link :rel "stylesheet" :href "https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" :integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" :crossorigin="anonymous"))
 
 			  (:link :type "text/css"
 					 :rel "stylesheet"
 					 :href "/style.css")
-
-			  (:script :src "https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js")
-			  (:script :src "/ajax.js"))
 
 			(:body
 			  (:ul :id "navbar"
@@ -117,6 +147,29 @@
 
 ;;; Start the server
 (init-server)
+
+;;; AJAX functions
+(push (create-ajax-dispatcher *ajax-processor*) *dispatch-table*)
+
+(defun-ajax say-hi (name) (*ajax-processor* :callback-data :response-xml)
+			(concatenate 'string "hi " name ", nice to meet you"))
+
+(defun-ajax ajax-share-price (q) (*ajax-processor* :method :POST :callback-data :json)
+			(if (stringp q) (setf q (parse-integer q)))
+			(format NIL "{ \"shares\" : ~D, \"price\" : ~4$ }"
+					q
+					(msr:share-price q)))
+
+(defun-ajax ajax-transaction-cost (q* q) (*ajax-processor* :method :POST :callback-data :json)
+			(if (stringp q*) (setf q* (parse-integer q*)))
+			(if (stringp q) (setf q (parse-integer q)))
+			(format NIL "{ \"newShares\" : ~D, \"oldShares\" : ~D, \"cost\" : ~4$ }"
+					q*
+					q
+					(msr:transaction-cost q* q)))
+
+(print (ajax-share-price 10))
+(print (ajax-transaction-cost 10 0))
 
 (defun pretty-datetime (datetime)
   (local-time:format-timestring
@@ -181,11 +234,11 @@
 					 (:table
 					   (:tr
 						 (:td "Bet")
-						 (:td :colspan 2 (:input :type "text" :name "bet")))
+						 (:td :colspan 2 (:input :type :text :name "bet" :class "required")))
 					   (:tr
 						 (:td "Deadline")
-						 (:td (:input :type "date" :name "deadline_date"))
-						 (:td (:input :type "time" :name "deadline_time")))
+						 (:td (:input :type :date :name "deadline_date" :class "required"))
+						 (:td (:input :type :time :name "deadline_time")))
 					   (:tr
 						 (:td (:input :type "submit" :value "Create market"))))))))))
 
@@ -372,27 +425,40 @@
 	(standard-page
 	  (:title "Create Market")
 	  (:h1 "Create Position")
+
 	  (:form :action "first-dibs" :method "POST"
 			 ;:onsubmit (js:nonempty-fields "Quantity cannot be empty" shares)
 			 (:table
 			   (:tr
 				 (:td "Market")
 				 (:td (fmt "~A" bet)
-					  (:input :type :hidden :name "bet" :value bet)))
+					  (:input :name "bet"
+							  :type :hidden
+							  :value bet)))
 			   (:tr
 				 (:td "Deadline")
 				 (:td (fmt "~A" deadline)
-					  (:input :type :hidden :name "deadline" :value deadline)))
+					  (:input :name "deadline"
+							  :type :hidden
+							  :value deadline)))
 			   (:tr
 				 (:td "Share price")
 				 (:td (format T "~4$" share-price)))
 			   (:tr
 				 (:td "Initial Position")
-				 (:td (:input :type "number" :min 1 :value 1 :name "shares"))
+				 (:td (:input :id "new-shares"
+							  :name "shares"
+							  :type :number
+							  :min 1
+							  :value 1
+							  :onchange (ps (ajax-transaction-cost)))
+					  (:input :id "old-shares"
+							  :type :hidden
+							  :value 0))
 				 (:td "shares"))
 			   (:tr
 				 (:td "Projected Cost")
-				 (:td (:b "TODO (update asynchronously)")))
+				 (:td :id "projected"))
 			   (:tr
 				 (:td :colspan 3
 					  (:input :type "submit" :value "Buy shares"))))))))
