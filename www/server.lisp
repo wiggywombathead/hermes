@@ -71,35 +71,40 @@
 			  ;(:script :src "/ajax.js"))
 
 			  (:script :type "text/javascript"
-					   "
-					   function jsonCost(response) {
-					   document.getElementById('projected').innerHTML = response.cost;
-					   }
-					   function ajaxTransactionCost() {
-					   smackjack.ajaxTransactionCost(document.getElementById('new-shares').value,
-					    							  document.getElementById('old-shares').value,
-					    							  jsonCost);
-					   }
-					   ")
-			;  (:script :type "text/javascript"
-			;		   (ps
-			;			 (defun json-cost (response)
-			;			   (alert (@ response cost)))
+					   (str (ps
+							  (defun json-cost (response)
+								(setf (chain document (get-element-by-id :projected) inner-h-t-m-l)
+									  (@ response cost)))
 
-			;			 (defun ajax-transaction-cost ()
-			;			   (chain smackjack (ajax-transaction-cost
-			;								  (chain document (get-element-by-id :new-shares) value)
-			;								  (chain document (get-element-by-id :old-shares) value)
-			;								  json-cost)))
+							  (defun ajax-transaction-cost-create ()
+								" user is always buying when creating a market, so no need to worry about checked boxes "
+								(let ((quantity (chain document (get-element-by-id :quantity) value)))
+								  (chain smackjack (ajax-transaction-cost-quantity
+													 quantity
+													 0
+													 T
+													 json-cost))))
 
-			;			 (defun json-price (response)
-			;			   (with-slots (shares price) response
-			;				 (alert (+ "p(" shares ")=" price))))
+							  (defun ajax-transaction-cost-trade ()
+								(let ((quantity (chain document (get-element-by-id :quantity) value))
+									  (q (chain document (get-element-by-id :old-shares) value))
+									  (radios (chain document (get-elements-by-name "buying")))
+									  checked
+									  buying-p)
 
-			;			 (defun ajax-share-price ()
-			;			   (chain smackjack (ajax-share-price
-			;								  (chain (get-element-by-id :shares) value)
-			;								  json-price)))
+								  ;; find which radio button is checked
+								  (loop for option in radios do
+										(if (@ option checked)
+										  (setf checked (@ option value))))
+
+								  ;; checked is equal to 1 if "buy" is selected
+								  (setf buying-p (equal checked 1))
+
+								  (chain smackjack (ajax-transaction-cost-quantity
+													 quantity
+													 q
+													 buying-p
+													 json-cost)))))))
 
 			  ;; style
 			  ;(:link :rel "stylesheet" :href "https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" :integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" :crossorigin="anonymous"))
@@ -151,16 +156,17 @@
 ;;; AJAX functions
 (push (create-ajax-dispatcher *ajax-processor*) *dispatch-table*)
 
-(defun-ajax say-hi (name) (*ajax-processor* :callback-data :response-xml)
-			(concatenate 'string "hi " name ", nice to meet you"))
+(defun-ajax ajax-share-price (q)
+			(*ajax-processor* :method :POST :callback-data :json)
 
-(defun-ajax ajax-share-price (q) (*ajax-processor* :method :POST :callback-data :json)
 			(if (stringp q) (setf q (parse-integer q)))
 			(format NIL "{ \"shares\" : ~D, \"price\" : ~4$ }"
 					q
 					(msr:share-price q)))
 
-(defun-ajax ajax-transaction-cost (q* q) (*ajax-processor* :method :POST :callback-data :json)
+(defun-ajax ajax-transaction-cost (q* q)
+			(*ajax-processor* :method :POST :callback-data :json)
+
 			(if (stringp q*) (setf q* (parse-integer q*)))
 			(if (stringp q) (setf q (parse-integer q)))
 			(format NIL "{ \"newShares\" : ~D, \"oldShares\" : ~D, \"cost\" : ~4$ }"
@@ -168,8 +174,22 @@
 					q
 					(msr:transaction-cost q* q)))
 
-(print (ajax-share-price 10))
-(print (ajax-transaction-cost 10 0))
+(defun-ajax ajax-transaction-cost-quantity (quantity q buying-p)
+			(*ajax-processor* :method :POST :callback-data :json)
+
+			;; Here we determine the transaction cost based on quantity desired
+			;; and whether we are buying or selling
+			;; We cannot simply use q* and q since the interface only allows
+			;; users to enter a positive number
+			(if (stringp quantity) (setf quantity (parse-integer quantity)))
+			(if (stringp q) (setf q (parse-integer q)))
+			(let ((q* (if buying-p
+						(+ q quantity)
+						(- q quantity))))
+			  (format NIL "{ \"newShares\" : ~D, \"oldShares\" : ~D, \"cost\" : ~4$ }"
+					  q*
+					  q
+					  (msr:transaction-cost q* q))))
 
 (defun pretty-datetime (datetime)
   (local-time:format-timestring
@@ -427,6 +447,7 @@
 	  (:h1 "Create Position")
 
 	  (:form :action "first-dibs" :method "POST"
+			 :onchange (ps (ajax-transaction-cost-create))
 			 ;:onsubmit (js:nonempty-fields "Quantity cannot be empty" shares)
 			 (:table
 			   (:tr
@@ -446,15 +467,17 @@
 				 (:td (format T "~4$" share-price)))
 			   (:tr
 				 (:td "Initial Position")
-				 (:td (:input :id "new-shares"
+				 (:td (:input :id "quantity"
 							  :name "shares"
 							  :type :number
 							  :min 1
-							  :value 1
-							  :onchange (ps (ajax-transaction-cost)))
+							  :value 1)
 					  (:input :id "old-shares"
 							  :type :hidden
-							  :value 0))
+							  :value 0)
+					  (:input :id "buying-p"
+							  :type :hidden
+							  :value 1))
 				 (:td "shares"))
 			   (:tr
 				 (:td "Projected Cost")
@@ -543,14 +566,11 @@
 	  (htm
 		(:h1 "Trade")
 		(:form :action "buy-or-sell-security" :method "POST"
+			   :onchange (ps (ajax-transaction-cost-trade))
 			   ;:onsubmit (js:nonempty-fields "Quantity cannot be empty" shares buying)
 			   (:table
 				 (:input :type :hidden :name "bet-id" :value id)
 
-				 ;; previous quantity of outstanding shares to calculate price
-				 (:input :type :hidden
-						 :name "previous-outstanding"
-						 :value outstanding-shares)
 				 (:tr
 				   (:td "Market")
 				   (:td (fmt "~A" (db:security-bet security)))
@@ -565,12 +585,31 @@
 				   (:td (fmt "~D shares" current-position)))
 				 (:tr
 				   (:td "Quantity")
-				   (:td (:input :type :number :min 1 :value 1 :name "shares"))
+				   (:td (:input :id "quantity"
+								:name "shares"
+								:type :number
+								:min 1
+								:value 1)
+						;; previous quantity of outstanding shares to calculate price
+						(:input :id "old-shares"
+								:name "previous-outstanding"
+								:type :hidden
+								:value outstanding-shares))
 				   (:td "shares"))
 				 (:tr
 				   (:td "Buy/Sell")
-				   (:td (:input :type :radio :value 1 :name "buying" :checked "checked") "Buy" (:br)
-						(:input :type :radio :value 0 :name "buying") "Sell"))
+				   (:td (:input :id "buying-p"
+								:name "buying"
+								:type :radio
+								:value 1
+								:checked "checked") "Buy" (:br)
+						(:input :id "buying-p"
+								:name "buying"
+								:type :radio
+								:value 0) "Sell"))
+				 (:tr
+				   (:td "Projected Cost")
+				   (:td :id "projected"))
 				 (:tr
 				   (:td :colspan 3
 						(:input :type "submit" :value "Trade"))))))))))

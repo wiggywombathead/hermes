@@ -1,6 +1,6 @@
 # TODO
 - [ ] Final features
-  - [ ] Rewrite javascript using Parenscript
+  - [x] Rewrite javascript using Parenscript
   - [ ] Automated closing of markets (when all arbiters have reported)
   - [ ] Gather signal priors from reporting history (not asking explicitly)
   - [x] Compute k correctly
