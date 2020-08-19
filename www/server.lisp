@@ -26,7 +26,6 @@
 ;;; Server functions
 
 (defun init-server ()
-
   ;; initialise the database (set the BANKER)
   (db:init-database)
 
@@ -39,13 +38,143 @@
   (setf *ajax-processor*
 		(make-instance 'ajax-processor :server-uri "/ajax")))
 
+(defun init-ajax ()
+  (push (create-ajax-dispatcher *ajax-processor*) *dispatch-table*)
+
+  (defun-ajax ajax-set-timer ()
+			  (*ajax-processor* :method :POST :callback-data :json)
+
+			  (let ((next-expiring (db:get-next-expiring-security (local-time:now)))
+					timer)
+				(unless (equal next-expiring NIL)
+				  (setf timer (local-time:timestamp-difference
+								(db:security-deadline next-expiring)
+								(local-time:now)))
+				  (format NIL "{ \"security\" : ~S, \"seconds\" : ~D }"
+						  (db:security-bet next-expiring)
+						  (ceiling timer)))))
+
+  (defun-ajax ajax-share-price (q)
+			  (*ajax-processor* :method :POST :callback-data :json)
+
+			  (if (stringp q) (setf q (parse-integer q)))
+			  (format NIL "{ \"shares\" : ~D, \"price\" : ~4$ }"
+					  q
+					  (msr:share-price q)))
+
+  (defun-ajax ajax-transaction-cost (q* q)
+			  (*ajax-processor* :method :POST :callback-data :json)
+
+			  (if (stringp q*) (setf q* (parse-integer q*)))
+			  (if (stringp q) (setf q (parse-integer q)))
+			  (format NIL "{ \"newShares\" : ~D, \"oldShares\" : ~D, \"cost\" : ~4$ }"
+					  q*
+					  q
+					  (msr:transaction-cost q* q)))
+
+  (defun-ajax ajax-transaction-cost-quantity (quantity q buying-p)
+			  (*ajax-processor* :method :POST :callback-data :json)
+
+			  ;; Here we determine the transaction cost based on quantity desired
+			  ;; and whether we are buying or selling
+			  ;; We cannot simply use q* and q since the interface only allows
+			  ;; users to enter a positive number
+			  (if (stringp quantity) (setf quantity (parse-integer quantity)))
+			  (if (stringp q) (setf q (parse-integer q)))
+			  (let ((q* (if buying-p
+						  (+ q quantity)
+						  (- q quantity))))
+				(format NIL "{ \"newShares\" : ~D, \"oldShares\" : ~D, \"cost\" : ~4$ }"
+						q*
+						q
+						(msr:transaction-cost q* q)))))
+
 (defun start-server ()
   (start *web-server*))
 
 (defun stop-server ()
   (stop *web-server*))
 
+(defun pretty-datetime (datetime)
+  (local-time:format-timestring
+	NIL datetime :format '((:hour 2)":"(:min 2)" "(:day 2)"-"(:month 2)"-":year)))
+
+(defun seconds-to-countdown (seconds)
+  " convert SECONDS to days, hours, minutes, and seconds "
+  (let ((days 0)
+		(hours 0)
+		(minutes 0)
+		(seconds (floor seconds)))
+
+	(if (> seconds 59)
+	  (progn
+		(setf minutes (floor (/ seconds 60)))
+		(setf seconds (- seconds (* minutes 60)))))
+
+	(if (> minutes 59)
+	  (progn
+		(setf hours (floor (/ minutes 60)))
+		(setf minutes (- minutes (* hours 60)))))
+
+	(if (> hours 23)
+	  (progn
+		(setf days (floor (/ hours 24)))
+		(setf hours (- hours (* days 24)))))
+
+	(format NIL "~Dd ~Dh ~Dm ~Ds~%" days hours minutes seconds)))
+
 ;;; Webpage functions
+
+(defun javascript-functions ()
+  (ps
+	(set-timer)
+
+	(defun set-timer ()
+	  " set the market closing function to execute when next market expires "
+	  (chain smackjack
+			 (ajax-set-timer #'(lambda (response)
+								 ;(alert (+ "setting timer to " (@ response seconds)))
+								 (set-timeout (lambda ()
+												;(alert (+ "\"" (@ response security) "\" has expired"))
+												; TODO: call close-market
+												(chain location (reload)))
+											  (* (@ response seconds) 1000))))))
+
+	(defun display-projected-cost (response)
+	  " asynchronously update projected transaction cost "
+	  (setf (chain document (get-element-by-id :projected) inner-h-t-m-l)
+			(@ response cost)))
+
+	(defun ajax-transaction-cost-create ()
+	  " calculate transaction cost when creating market "
+	  (let ((quantity (chain document (get-element-by-id :quantity) value)))
+		(chain smackjack (ajax-transaction-cost-quantity
+						   quantity
+						   0
+						   T
+						   display-projected-cost))))
+
+	(defun ajax-transaction-cost-trade ()
+	  " calculate transaction cost when trading in market "
+	  (let ((quantity (chain document (get-element-by-id :quantity) value))
+			(q (chain document (get-element-by-id :old-shares) value))
+			(radios (chain document (get-elements-by-name "buying")))
+			checked
+			buying-p)
+
+		;; find which radio button is checked
+		(loop for option in radios do
+			  (if (@ option checked)
+				(setf checked (@ option value))))
+
+		;; checked is equal to 1 if "buy" is selected
+		(setf buying-p (equal checked 1))
+
+		(chain smackjack (ajax-transaction-cost-quantity
+						   quantity
+						   q
+						   buying-p
+						   display-projected-cost))))))
 
 (defmacro standard-page ((&key title) &body body)
   " template for a standard webpage "
@@ -61,57 +190,24 @@
 			  (:meta :http-equiv "Content-Type"
 					 :content "text/html;charset=utf-8")
 
+			  ;; style
+			  ;(:link :rel "stylesheet"
+			  ;	   :href "https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"
+			  ;	   :integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk"
+			  ;	   :crossorigin="anonymous")
+
 			  ;; fonts
 			  (:link :rel "stylesheet"
 					 :href "https://fonts.googleapis.com/css?family=Merriweather")
 
-			  (str (generate-prologue *ajax-processor*))
-
-			  (:script :src "https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"))
-			  ;(:script :src "/ajax.js"))
-
-			  (:script :type "text/javascript"
-					   (str (ps
-							  (defun json-cost (response)
-								(setf (chain document (get-element-by-id :projected) inner-h-t-m-l)
-									  (@ response cost)))
-
-							  (defun ajax-transaction-cost-create ()
-								" user is always buying when creating a market, so no need to worry about checked boxes "
-								(let ((quantity (chain document (get-element-by-id :quantity) value)))
-								  (chain smackjack (ajax-transaction-cost-quantity
-													 quantity
-													 0
-													 T
-													 json-cost))))
-
-							  (defun ajax-transaction-cost-trade ()
-								(let ((quantity (chain document (get-element-by-id :quantity) value))
-									  (q (chain document (get-element-by-id :old-shares) value))
-									  (radios (chain document (get-elements-by-name "buying")))
-									  checked
-									  buying-p)
-
-								  ;; find which radio button is checked
-								  (loop for option in radios do
-										(if (@ option checked)
-										  (setf checked (@ option value))))
-
-								  ;; checked is equal to 1 if "buy" is selected
-								  (setf buying-p (equal checked 1))
-
-								  (chain smackjack (ajax-transaction-cost-quantity
-													 quantity
-													 q
-													 buying-p
-													 json-cost)))))))
-
-			  ;; style
-			  ;(:link :rel "stylesheet" :href "https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" :integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" :crossorigin="anonymous"))
-
 			  (:link :type "text/css"
 					 :rel "stylesheet"
 					 :href "/style.css")
+
+			  ;; javascript
+			  (str (generate-prologue *ajax-processor*))
+			  (:script :src "https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js")
+			  (:script :type "text/javascript" (str (javascript-functions)))
 
 			(:body
 			  (:ul :id "navbar"
@@ -134,7 +230,7 @@
 									  (db:user-budget (session-value 'session-user))))))
 
 					(:div :class "content"
-						  ,@body))))))
+						  ,@body)))))))
 
 (defmacro define-url-fn ((name) &body body)
   " creates handler NAME and pushes it to *DISPATCH-TABLE* "
@@ -153,47 +249,7 @@
 ;;; Start the server
 (init-server)
 
-;;; AJAX functions
-(push (create-ajax-dispatcher *ajax-processor*) *dispatch-table*)
-
-(defun-ajax ajax-share-price (q)
-			(*ajax-processor* :method :POST :callback-data :json)
-
-			(if (stringp q) (setf q (parse-integer q)))
-			(format NIL "{ \"shares\" : ~D, \"price\" : ~4$ }"
-					q
-					(msr:share-price q)))
-
-(defun-ajax ajax-transaction-cost (q* q)
-			(*ajax-processor* :method :POST :callback-data :json)
-
-			(if (stringp q*) (setf q* (parse-integer q*)))
-			(if (stringp q) (setf q (parse-integer q)))
-			(format NIL "{ \"newShares\" : ~D, \"oldShares\" : ~D, \"cost\" : ~4$ }"
-					q*
-					q
-					(msr:transaction-cost q* q)))
-
-(defun-ajax ajax-transaction-cost-quantity (quantity q buying-p)
-			(*ajax-processor* :method :POST :callback-data :json)
-
-			;; Here we determine the transaction cost based on quantity desired
-			;; and whether we are buying or selling
-			;; We cannot simply use q* and q since the interface only allows
-			;; users to enter a positive number
-			(if (stringp quantity) (setf quantity (parse-integer quantity)))
-			(if (stringp q) (setf q (parse-integer q)))
-			(let ((q* (if buying-p
-						(+ q quantity)
-						(- q quantity))))
-			  (format NIL "{ \"newShares\" : ~D, \"oldShares\" : ~D, \"cost\" : ~4$ }"
-					  q*
-					  q
-					  (msr:transaction-cost q* q))))
-
-(defun pretty-datetime (datetime)
-  (local-time:format-timestring
-	T datetime :format '((:hour 2)":"(:min 2)" "(:day 2)"-"(:month 2)"-":year)))
+(init-ajax)
 
 (define-url-fn
   (index)
@@ -212,7 +268,7 @@
 			  (htm
 				(:tr
 				  (:td (format T "~S" (db:security-bet s)))
-				  (:td (pretty-datetime (db:security-deadline s)))
+				  (:td (fmt "~A" (pretty-datetime (db:security-deadline s))))
 				  (:td :class "number"
 					   (format T "~4$" (msr:share-price (db:security-shares s))))
 				  (if (session-value 'session-user)
@@ -232,7 +288,7 @@
 			  (htm
 				(:tr
 				  (:td (format T "~S" (db:security-bet s)))
-				  (:td (pretty-datetime (db:security-deadline s)))
+				  (:td (fmt "~A" (pretty-datetime (db:security-deadline s))))
 				  (:td :class "number" (format T "~4$" (msr:share-price (db:security-shares s))))
 
 				  (if (session-value 'session-user)
@@ -353,7 +409,7 @@
 		(htm
 		  (:tr
 			(:td (fmt "~S" (db:security-bet security)))
-			(:td (pretty-datetime (db:security-deadline security)))
+			(:td (fmt "~A" (pretty-datetime (db:security-deadline security))))
 			(:td :class "number" (fmt "~D" (db:get-current-position
 											 (session-value 'session-user)
 											 security)))
@@ -378,7 +434,7 @@
 		(htm
 		  (:tr
 			(:td (fmt "~S" (db:security-bet security)))
-			(:td (pretty-datetime (db:security-deadline security)))
+			(:td (fmt "~A" (pretty-datetime (db:security-deadline security))))
 			(:td :class "number" (fmt "~D" (db:get-current-position
 											 (session-value 'session-user)
 											 security)))
@@ -576,7 +632,7 @@
 				   (:td (fmt "~A" (db:security-bet security)))
 				 (:tr
 				   (:td "Deadline")
-				   (:td (pretty-datetime (db:security-deadline security))))
+				   (:td (fmt "~A" (pretty-datetime (db:security-deadline security)))))
 				 (:tr
 				   (:td "Share price")
 				   (:td (format T "~4$" share-price)))
@@ -686,7 +742,7 @@
 			(:td (fmt "~S" (db:security-bet security))))
 		  (:tr
 			(:td "Expires")
-			(:td (pretty-datetime (db:security-deadline security))))
+			(:td (fmt "~A" (pretty-datetime (db:security-deadline security)))))
 		  (:tr
 			(:td (fmt "Shares ~A" (if (> shares 0) "bought" "sold")))
 			(:td (fmt "~D" (abs shares))))
@@ -729,7 +785,7 @@
 				   (:td (fmt "~S" (db:security-bet security))))
 				 (:tr
 				   (:th "Expired on")
-				   (:td (pretty-datetime (db:security-deadline security))))
+				   (:td (fmt "~A" (pretty-datetime (db:security-deadline security)))))
 				 (:tr
 				   (:th "Market Outcome")
 				   (:td (:input :type :radio :value 1 :checked "checked"
@@ -846,7 +902,9 @@
 				shares
 				(db:security-bet security))
 
-		(db:bank-pay shareholder (* outcome shares))))
+		;; TODO: why doesn't this pay shareholders???
+		(db:bank-pay (db:get-user-by-name (db:user-name shareholder))
+					 (* outcome shares))))
 
 	;; pair arbiters randomly
 	(setf pairs (util:random-pairing arbiters))

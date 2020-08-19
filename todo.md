@@ -2,8 +2,13 @@
 - [ ] Final features
   - [x] Rewrite javascript using Parenscript
   - [ ] Automated closing of markets (when all arbiters have reported)
+    - [ ] set timer on each page load to trigger when soonest deadline expires
   - [ ] Gather signal priors from reporting history (not asking explicitly)
   - [x] Compute k correctly
+  - [ ] Compute f correctly
+  - [ ] Thought: only allow user to be arbiter if they have a position in
+	*some* market? -- would stop users just voting on outcomes (guaranteed
+	profits)
 
 - [ ] Website
   - [x] Basic pages in Hunchentoot

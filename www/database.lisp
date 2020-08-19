@@ -25,6 +25,7 @@
 		   :get-securities
 		   :get-security-by-id
 		   :set-security-outcome
+		   :get-next-expiring-security
 
 		   ;; portfolio stuff
 		   :add-portfolio-entry
@@ -207,10 +208,20 @@
   (with-open-database
 	(select-dao 'security)))
 
-(defun get-active-markets (date)
+(defun get-active-markets (datetime)
   " return all securities whose deadline has not yet passed "
   (with-open-database
-	(select-dao 'security (where (:> :deadline date)))))
+	(select-dao 'security (where (:> :deadline datetime)))))
+
+(defun get-expiring-securities (datetime)
+  " return all securities ordered by deadline, most imminent first "
+  (with-open-database
+	(select-dao 'security
+				(where (:> :deadline datetime))
+				(order-by (:asc :deadline)))))
+
+(defun get-next-expiring-security (datetime)
+  (first (get-expiring-securities datetime)))
 
 (defun get-unresolved-markets (date)
   " return all securities whose deadline has passed but outcomes have not been
@@ -391,3 +402,4 @@
 								  :security security))))
 		  (push (list shareholder shares) user-shares))))
 	user-shares))
+
