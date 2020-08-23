@@ -2,8 +2,13 @@
 - [ ] Final features
   - [x] Rewrite javascript using Parenscript
   - [ ] Automated closing of markets (when all arbiters have reported)
-    - [ ] set timer on each page load to trigger when soonest deadline expires
+    - [x] set timer on each page load to trigger when soonest deadline expires
+	- [x] As soon as final arbiter reports an outcome, close the market and pay
+	  shareholders. NOTE: always after at least two reports and at least some
+	  proportion of userbase has reported (proportion could diminish as
+	  userbase grows?)
   - [ ] Gather signal priors from reporting history (not asking explicitly)
+    - Produces an "average signal reliability" for each arbiter: probably good?
   - [x] Compute k correctly
   - [ ] Compute f correctly
   - [ ] Thought: only allow user to be arbiter if they have a position in

@@ -23,6 +23,8 @@
 
 (defparameter *ajax-processor* NIL)
 
+(defconstant +minimum-reports+ 2)
+
 ;;; Server functions
 
 (defun init-server ()
@@ -295,10 +297,10 @@
 					(htm
 					  (:td (:form :action "resolve-market" :method "POST"
 								  (:input :type :hidden :name "bet-id" :value (db:security-id s))
-								  (:input :type :submit :value "Report Outcome")))
-					  (:td (:form :action "close-market" :method "POST"
-								  (:input :type :hidden :name "bet-id" :value (db:security-id s))
-								  (:input :type :submit :value "Close Market")))))))))
+								  (:input :type :submit :value "Report Outcome")))))))))
+					;  (:td (:form :action "close-market" :method "POST"
+					;			  (:input :type :hidden :name "bet-id" :value (db:security-id s))
+					;			  (:input :type :submit :value "Close Market")))))))))
 
 	;; create a new market
 	(if (session-value 'session-user)
@@ -823,9 +825,24 @@
 		security)
 
 	(setf security (db:get-security-by-id id))
-	(db:report-market-outcome session-user security report positive-belief negative-belief))
+	(db:report-market-outcome session-user security report positive-belief negative-belief)
 
-  (redirect "/index"))
+	(standard-page
+	  (:title "")
+	  (:form :id "last-report" :action "close-market" :method :POST
+			 (:input :name "bet-id" :value id))
+
+	  ;; if required number of arbiters have reported, then close the market
+	  ;; TODO: this works but is a bit slow, find a better
+	  (if (= (db:get-num-reports security) +minimum-reports+)
+		(htm
+		  (:script (str
+					 (ps-inline (chain document
+									   (get-element-by-id :last-report)
+									   (submit))))))
+		(htm
+		  (:script (str
+					 (ps-inline (chain window location (replace "/index"))))))))))
 
 (define-url-fn
   (close-market)
