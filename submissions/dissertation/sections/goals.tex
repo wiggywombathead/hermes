@@ -1,0 +1,39 @@
+\section{Goals}
+
+\label{sec:goals}
+
+The overall goal of the project is to implement a decentralised prediction
+market in which users may act as arbiters in markets in which they themselves
+are stakeholders. This will be achieved by the following essential objectives:
+
+\begin{itemize}
+	\itemsep0em
+	\item create a web application where users may specify bets to trade on
+	\item implement a trading mechanism allowing users to buy and sell
+		shares in user-made securities
+	\item crowdsource outcome determination using reports from arbiters who may
+		hold positions in the markets
+	\item incentivise truthful reporting from the arbiters
+\end{itemize}
+
+These goals will largely be achieved by implementing the mechanism laid out by
+Freeman et al~\cite{CODiPM}. The first three goals cover core functionality of
+any decentralised prediction market, while the fourth is concerned with tuning
+system parameters, before and during execution, in order to ensure that users
+do not manipulate the mechanism.
+ 
+Other features that we look to implement that are not essential to the running
+of the system but highly desirable for user experience include asynchronous
+communication with the server to display up-to-date pricing information without
+a page refresh, and the automated closing of markets.  Indeed, while their
+current omission does not necessarily hamper the functionality of the market
+itself, they should be implemented in order for the system to run smoothly and
+independently.
+
+The following additional features could be implemented, although they are not
+the focus of the project or are unlikely to be achieved in the remaining time
+frame. They include removing the need to explicitly ask for signal beliefs
+from arbiters; the option to sort markets by categories; displaying user trade
+histories; and sanitising database inputs.
+
+

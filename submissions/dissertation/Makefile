@@ -2,7 +2,7 @@ LATEX = pdflatex
 BIBTEX = bibtex
 
 MAIN = dissertation
-FILES = $(wildcard *.tex)
+FILES = $(wildcard sections/*.tex)
 
 OUT = $(MAIN)
 

@@ -920,8 +920,7 @@
 				(db:security-bet security))
 
 		;; TODO: why doesn't this pay shareholders???
-		(db:bank-pay (db:get-user-by-name (db:user-name shareholder))
-					 (* outcome shares))))
+		(db:bank-pay shareholder (* outcome shares))))
 
 	;; pair arbiters randomly
 	(setf pairs (util:random-pairing arbiters))

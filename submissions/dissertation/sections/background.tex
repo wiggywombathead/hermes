@@ -1,0 +1,260 @@
+\section{Background}
+
+\label{sec:background}
+
+\subsection{Setup}
+
+Consider the following problem within algorithmic mechanism design known as the
+\emph{information aggregation problem}~\cite[Ch.~26]{AGTBook}. An individual
+known as the ``aggregator'' wishes to obtain a prediction about an uncertain
+variable which will be realised at some point in the future. There are a number
+of individuals known as the ``informants'' who each hold sets of information
+about the variable's outcome. The goal is to design a mechanism that extracts
+the relevant information from the informants and uses it to provide a
+prediction of the variable's realisation. In an ideal setting the mechanism
+should produce the same prediction as an omniscient forecast that has access to
+all information available to all informants. This may not be viable in
+practice, since each agent's information is private information, and so the
+mechanism must incentivise them to act in the desired truth-telling manner.
+
+A prediction market is one mechanism that can provide such a forecast. In this
+setting the aggregator creates a financial security whose payoff is tied to the
+outcome of the variable. In the simpler case of binary events, such a security
+may pay out \$1 for each share held if the variable has a ``true'' or ``yes''
+outcome, and \$0 otherwise, however markets can be created for other types
+including discrete (``will the result of the match be a home win, away win, or
+a draw?''), continuous (``what will be the highest measured temperature in
+Coventry in September?''), or any combination of these types. Informants are
+then able to participate in the market induced by the security by trading
+shares according to their beliefs: those who believe, for example, that global
+warming is real might buy shares at a given price in the market, ``the global
+average temperature in 2020 will be higher than that in 2019'', while deniers
+may be inclined to sell shares. The share price will be adjusted accordingly,
+and the aggregator can view the current price as the informant's combined
+belief of the outcome of the event.
+
+In this model there is a set $\Omega$ of possible states of the world and at
+any moment the world is in exactly one state $\omega \in \Omega$, though the
+informants do not know which. Each informant $i$ may however possess partial
+information regarding this true state, and this is represented by a partition
+$\pi_i$ of $\Omega$. The agent knows in which subset of this partition the true
+world state lies, but does not know the exact member of which is true. Given
+$n$ agents, their combined information $\hat{\pi}$ is the coarsest common
+refinement of the partitions $\pi_1, \ldots, \pi_n$.\footnote{A partition
+$\alpha$ of a set $X$ is a refinement of a partition $\rho$ of $X$ if every
+element of $\alpha$ is a subset of some element of $\rho$. In this case
+$\alpha$ is \emph{finer} than $\rho$ and $\rho$ is \emph{coarser} than
+$\alpha$.}
+
+We also assume a common prior probability distribution $P \in \Delta^{\Omega}$
+which describes the probabilities that all agents assign to the different world
+states before receiving any information. Once each agent receives their partial
+information, they form their posterior beliefs by restricting the common prior
+to the subset of their partition in which they know the true state to lie. For
+our purposes, a \emph{forecast} is an estimate of the expected value of the
+function $f : \Omega \rightarrow \{0,1\}$, known as an \emph{event}, which
+equals one for exactly one subset of $\Omega$ and 0 otherwise.
+
+As mentioned, there is an ideal ``omniscient'' forecast that uses the
+distribution $P$ restricted to the subset of $\hat{\pi}$ in which the true
+world state lies but which is impractical given the private nature of each
+agent's information. The goal is therefore a mechanism to incentivise agents to
+reveal their private information such that in equilibrium we achieve a forecast
+as close as possible to the omniscient one. Prediction markets offer the agents
+the chance of financial gain for revealing information regarding the expected
+value of $f(\omega)$, and the share price of the security can be interpreted as
+the collective forecast of the agents. In Section~\ref{sec:design} we shall
+outline the different approaches one can take to designing the prediction
+market mechanism itself and the one among them, a Market Scoring Rule, that we
+implement. Importantly, Market Scoring Rules are one of the ways to increase
+liquidity in the market as the system itself assumes the opposite side to any
+trade, meaning users may participate even when no other user wishes to buy or
+sell for what they are asking or bidding. This means a trade is always able to
+be executed, although without care the system could make consistent losses.
+
+\subsection{Literature Review}
+
+% Iowa Electronic Markets
+% PredictIt, PredictAlot
+% Intrade
+% Rational expectations - demand not same as traditional market
+% PredictIt disputes: wording
+
+The Iowa Electronic Markets (IEM) are real-money prediction markets developed
+by the University of Iowa~\cite{IEM} that have been running since 1988. They
+allow users to buy and sell contracts based on the outcome of U.S. political
+elections and economic indicators, and are currently offering markets for the
+winning party of the 2020 U.S. presidential election, the vote share between
+the Democratic and Republican parties in the 2020 U.S. presidential election,
+and the compositions of the houses of Congress, House of Representatives, and
+U.S. Senate after the outcome of the 2020 U.S. congressional elections. The
+number of markets offered is small and the topics are kept relevant to current
+events, meaning there is likely to be high liquidity for any security a user
+wishes to trade in. This has allowed the markets to predict the results of
+political elections with more accuracy and less error than traditional polls:
+for the presidential elections between 1988 and 2000, three-quarters of the
+time the IEM's market price on the day each poll was released was more accurate
+for predicting vote share than the poll itself~\cite[pg.~19]{WisdomOfCrowds}.
+These markets inspired similar markets in the forms of the Hollywood Stock
+Exchange, NewsFutures, and the Foresight Exchange report, which achieved
+similar successes despite not using real money. 
+
+An issue with these markets is that they are restrictive in the bets they
+offer. Although this can be beneficial in that they provide a focused and
+liquid market in which to trade, it leaves them potentially less interesting to
+interact with. A combinatorial prediction market is a solution to this and
+drastically increases the number of events that can be bet on and outcomes
+predicted by offering securities on interrelated propositions that can be
+combined in various ways. One example of such a market is that of
+\emph{Predictalot}~\cite{Predictalot}, a combinatorial prediction market
+developed by Yahoo! that allowed users to trade securities in the 2010 NCAA
+Men's Division I Basketball Tournament. The tournament sees the top 64 teams
+play 63 games in a knockout competition, yielding a total outcome space of size
+$2^{63}$. \emph{Predictalot} then kept track of the odds, computing them by
+scanning through all of the predictions made by users. This prediction market
+was the original inspiration for this project in investigating prediction
+markets. Using a Market Scoring Rule for such a market would involve computing
+a summation over the entire outcome space $\Omega$, an intractable, \#P-hard
+problem akin to counting the number of variable assignments that satisfy a CNF
+formula, or or the number of subsets in a list of integers that sum to zero.
+Instead, they employ an implementation of importance sampling, a technique for
+estimating properties of a particular probability distribution using only
+samples generated from a different distribution. This ``naive'' approach is
+then improved upon by the work of Dud\`ik, Lahaie, and
+Pennock~\cite{Dudik2012}, who use convex optimisation and constraint generation
+to develop a market maker which is tractable. This approach lies somewhere
+between treating all securities as independent and a fully combinatorial,
+``ideal'' market maker, propagating information among related securities for
+more complete information aggregation. The ways in which their odds are
+calculated are also natural: for example, a large bet on a team to win the
+entire tournament automatically increases the odds that the same team will
+progress past the first round, since they would not be able to win the
+competition without doing so. This work is then improved upon by Kroer,
+Dud\`ik, Lahaie, and Balakrishnan~\cite{Kroer2016}, in which they use integer
+programming to achieve arbitrage-free trades, or always profitable risk-free
+trades. On top of achieving bounded loss, a crucial element behind a market
+mechanism operating in the real world and avoiding bankruptcy, avoiding
+arbitrage is desirable as it leads to more accurate forecasts: since users
+cannot make risk-free profits, they are forced to bet according to their true
+beliefs.
+
+All examples so far have involved a centralised market mechanism. These types
+of systems involve a central authority providing the bets upon which users may
+bet and then verifying their outcome. \emph{Decentralised} markets allow the
+users themselves to define their own bets and trade shares in them. These types
+of systems involve a central authority providing the bets upon which users may
+bet and then verifying their outcome. These types of markets allow the users
+themselves to define their own markets by providing custom bets and them
+trading shares in them. Several examples of decentralised markets exist and
+they are often implemented with cryptocurrencies. Peterson et
+al.~\cite{Peterson2015} study the setting and use it to implement the oracle at
+the heart of \emph{Augur}~\cite{Augur}, a decentralised prediction market built
+upon the Ethereum blockchain that launched in 2018. It allows users to offer
+predictions on any topic, and markets may be either categorical, which are
+similar to binary markets in which the winner takes all, or scalar, which offer
+users a spectrum of outcomes in which to invest. For example, users may bet
+that the global average temperature for 2020 will lie in a certain range.  As
+in many decentralised markets, outcomes of events are then resolved by the
+users, and in the case of \emph{Augur} users are incentivised to report
+truthfully by way of paying reporting fees. This amounts to users depositing
+tokens to back their report, and token holders are then entitled to the trading
+fees generated.
+
+As can often be the case with real-money markets, however, the platform had
+quickly devolved into an assassination market~\cite{AugurDeathMarket} --
+originally this referred to the case where users created markets on the deaths
+of certain people, which then incentivised their assassination. A user could
+stand to profit by placing a bet on the exact time of their death, and ensure
+this bet was profitable by assassinating the subject. More generally this
+refers to the users of a prediction market having the ability to influence a
+market's outcome and acting on this opportunity. Another issue with
+\emph{Augur} is the option to report a market's outcome as ``invalid'': this is
+for the case where the user-made bet is too ambiguous to decided, such as,
+``Bayern Munich will play well against Paris Saint Germain''.
+
+Other decentralised markets based on cryptocurrencies exist, including
+\emph{Omen}~\cite{Omen} and \emph{Hivemind}~\cite{Hivemind}. The former is
+similar to \emph{Augur} in that it allows users to create markets for any bet
+they like and whose outcomes are not decided by the system itself. Whereas
+\emph{Augur} uses a reputation system in the form of requiring users to back
+their report of a market's outcome with \$REP tokens, \emph{Omen} asks the
+market creator to supply an ``oracle'' through which the outcome can be
+determined. They note that this oracle can even be \emph{Augur}. Although this
+may solve the ``invalid'' outcome option for ambiguous bets, it may introduce
+bias into the process of outcome determination. For example, suppose a user
+creates a market for ``The Democratic nominee will tell a lie during tonight's
+debate'' and lists the oracle as the conservative news channel, Fox News. Users
+would then trade on how they think the oracle will report the outcome, and not
+what they believe the outcome will be themselves. An important aspect of
+decentralised markets must therefore be that the outcome is determined by the
+community, not a single source. 
+
+In contrast to \emph{Augur}, which implements a traditional orderbook using
+Ethereum, \emph{Omen} uses an automated market maker to provide liquidity to
+its securities. Two approaches to this include using a Market Scoring Rule to
+update the odds on a given event, and implementing a parimutuel market where
+users compete for a share of the total money wagered while the share price
+varies dynamically according to some cost function. Hanson~\cite{Hanson2003}
+shows that we can use any strictly proper scoring rule to implement an
+automated market maker: with such scoring rules, agents maximise their expected
+utility by truthfully revealing their predictions. In particular, in this
+project we implement the peer prediction market introduced by Freeman, Lahaie,
+and Pennock~\cite{CODiPM}, which specifies a market that uses a Market Scoring
+Rule to trade bets and crowdsources outcome determination, similarly to
+\emph{Augur}, by asking users for reports. All they require is that the rule is
+strictly proper, giving plenty of choice to study the effects different rules
+have on user behaviour. While the choice of scoring rule is less important than
+the mechanism by which market outcomes are determined, a recent work by Liu,
+Wang, and Chen~\cite{Liu2020} introduces scoring rules for the setting where
+the aggregator has access only to user reports, which they call Surrogate
+Scoring Rules (SSRs). This appears to be an interesting avenue to further
+explore and adapt to a prediction market. One assumption they make, however,
+seems incompatible with the decentralised setting in that they require all
+events to be independent.  Given that users can create a market for \emph{any}
+bet, this condition is impossible to ensure. Since SSRs can be strictly proper
+under certain conditions, they may be applicable as the Market Scoring Rule in
+\cite{CODiPM}.
+
+%%%%%%%%%%%%%%%%
+
+%Both \emph{PredictIt} \cite{PredictIt} and the Iowa Electronic Markets
+%(IEM) \cite{IEM} provide the ability to make bets on various political
+%events, including on outcomes within the 2020 US presidential election.
+%However, like \emph{Augur}, they do not provide the ability to combine
+%these bets in complex ways and hence this is a gap that this project aims
+%to fill.
+%
+%Prediction markets receive considerable attention within the algorithmic game
+%theory literature. They have been used to predict the outcomes of a range of
+%events, particularly in business, sports, and politics~\cite{Spann2003,
+%Berg2006}. Nay, Van der Linden, and Gilligan~\cite{Nay2016} analyse prediction
+%markets empirically to study how market parameters may affect an agent's
+%beliefs on the real-world outcome, making the argument for a prediction market
+%for betting on the cause of global warming to show how increased agent
+%participation can cause public belief to shift towards the ``correct'' cause.
+%They are therefore powerful not only in aggregating public opinion, but also in
+%their ability to change it.
+%
+%In the centralised setting Kroer, Dud\'ik, Lahaie, and
+%Balakrishnan~\cite{Kroer2016} introduce a cost-based market maker in which all
+%bets are bought and sold to the market, rather than the traders, which
+%sidesteps the problem of low liquidity in traditional markets. Another way to
+%avoid low liquidity is to use a market scoring rule: Liu, Wang, and
+%Chen~\cite{Liu2020} introduce Surrogate Scoring Rules to elicit private
+%probabilistic beliefs with access only to agents' reports, which is similar to
+%our setting. Their mechanisms do not rely on a ground truth to quantify the
+%quality of the elicited information, and could hence be particularly applicable
+%to decentralised prediction markets. Freeman et al.~\cite{CODiPM} take such a
+%decentralised approach and introduce a mechanism in which market outcomes are
+%crowdsourced by a group of arbiters. They derive the conditions under which
+%arbiters are incentivised to act truthfully, even if an arbiter reports on a
+%market where they themselves hold a stake, and theirs is the paper upon which
+%we base our design. Several other decentralised markets exist: Peterson et
+%al.~\cite{Peterson2015} study the setting to implement the decentralised oracle
+%behind the prediction market \emph{Augur}~\cite{Augur}, which uses a reputation
+%system to protect against manipulation. Similar markets based on
+%cryptocurrencies exist in \emph{Gnosis}~\cite{Gnosis} and
+%\emph{Hivemind}~\cite{Hivemind}, though it has not been shown that any of these
+%achieve any theoretical guarantees of truthfulness.
+
+
