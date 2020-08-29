@@ -120,7 +120,7 @@ formula, or or the number of subsets in a list of integers that sum to zero.
 Instead, they employ an implementation of importance sampling, a technique for
 estimating properties of a particular probability distribution using only
 samples generated from a different distribution. This ``naive'' approach is
-then improved upon by the work of Dud\`ik, Lahaie, and
+then improved upon by the work of Dud\'ik, Lahaie, and
 Pennock~\cite{Dudik2012}, who use convex optimisation and constraint generation
 to develop a market maker which is tractable. This approach lies somewhere
 between treating all securities as independent and a fully combinatorial,
@@ -130,7 +130,7 @@ calculated are also natural: for example, a large bet on a team to win the
 entire tournament automatically increases the odds that the same team will
 progress past the first round, since they would not be able to win the
 competition without doing so. This work is then improved upon by Kroer,
-Dud\`ik, Lahaie, and Balakrishnan~\cite{Kroer2016}, in which they use integer
+Dud\'ik, Lahaie, and Balakrishnan~\cite{Kroer2016}, in which they use integer
 programming to achieve arbitrage-free trades, or always profitable risk-free
 trades. On top of achieving bounded loss, a crucial element behind a market
 mechanism operating in the real world and avoiding bankruptcy, avoiding
@@ -158,19 +158,21 @@ in many decentralised markets, outcomes of events are then resolved by the
 users, and in the case of \emph{Augur} users are incentivised to report
 truthfully by way of paying reporting fees. This amounts to users depositing
 tokens to back their report, and token holders are then entitled to the trading
-fees generated.
+fees generated. Although this persuades against manipulation, it has not been
+shown whether this system achieves any theoretical guarantees of truthful
+reporting.
 
-As can often be the case with real-money markets, however, the platform had
-quickly devolved into an assassination market~\cite{AugurDeathMarket} --
-originally this referred to the case where users created markets on the deaths
-of certain people, which then incentivised their assassination. A user could
-stand to profit by placing a bet on the exact time of their death, and ensure
-this bet was profitable by assassinating the subject. More generally this
-refers to the users of a prediction market having the ability to influence a
-market's outcome and acting on this opportunity. Another issue with
-\emph{Augur} is the option to report a market's outcome as ``invalid'': this is
-for the case where the user-made bet is too ambiguous to decided, such as,
-``Bayern Munich will play well against Paris Saint Germain''.
+As can often be the case with real-money markets, the platform had quickly
+devolved into an assassination market~\cite{AugurDeathMarket} -- originally
+this referred to the case where users created markets on the deaths of certain
+people, which then incentivised their assassination. A user could stand to
+profit by placing a bet on the exact time of their death, and ensure this bet
+was profitable by assassinating the subject. More generally this refers to the
+users of a prediction market having the ability to influence a market's outcome
+and acting on this opportunity. Another issue with \emph{Augur} is the option
+to report a market's outcome as ``invalid'': this is for the case where the
+user-made bet is too ambiguous to decided, such as, ``Bayern Munich will play
+well against Paris Saint Germain''.
 
 Other decentralised markets based on cryptocurrencies exist, including
 \emph{Omen}~\cite{Omen} and \emph{Hivemind}~\cite{Hivemind}. The former is
@@ -199,8 +201,8 @@ shows that we can use any strictly proper scoring rule to implement an
 automated market maker: with such scoring rules, agents maximise their expected
 utility by truthfully revealing their predictions. In particular, in this
 project we implement the peer prediction market introduced by Freeman, Lahaie,
-and Pennock~\cite{CODiPM}, which specifies a market that uses a Market Scoring
-Rule to trade bets and crowdsources outcome determination, similarly to
+and Pennock~\cite{Freeman2017}, which specifies a market that uses a Market
+Scoring Rule to trade bets and crowdsources outcome determination, similarly to
 \emph{Augur}, by asking users for reports. All they require is that the rule is
 strictly proper, giving plenty of choice to study the effects different rules
 have on user behaviour. While the choice of scoring rule is less important than
@@ -213,48 +215,19 @@ seems incompatible with the decentralised setting in that they require all
 events to be independent.  Given that users can create a market for \emph{any}
 bet, this condition is impossible to ensure. Since SSRs can be strictly proper
 under certain conditions, they may be applicable as the Market Scoring Rule in
-\cite{CODiPM}.
+\cite{Freeman2017}. 
 
-%%%%%%%%%%%%%%%%
-
-%Both \emph{PredictIt} \cite{PredictIt} and the Iowa Electronic Markets
-%(IEM) \cite{IEM} provide the ability to make bets on various political
-%events, including on outcomes within the 2020 US presidential election.
-%However, like \emph{Augur}, they do not provide the ability to combine
-%these bets in complex ways and hence this is a gap that this project aims
-%to fill.
-%
-%Prediction markets receive considerable attention within the algorithmic game
-%theory literature. They have been used to predict the outcomes of a range of
-%events, particularly in business, sports, and politics~\cite{Spann2003,
-%Berg2006}. Nay, Van der Linden, and Gilligan~\cite{Nay2016} analyse prediction
-%markets empirically to study how market parameters may affect an agent's
-%beliefs on the real-world outcome, making the argument for a prediction market
-%for betting on the cause of global warming to show how increased agent
-%participation can cause public belief to shift towards the ``correct'' cause.
-%They are therefore powerful not only in aggregating public opinion, but also in
-%their ability to change it.
-%
-%In the centralised setting Kroer, Dud\'ik, Lahaie, and
-%Balakrishnan~\cite{Kroer2016} introduce a cost-based market maker in which all
-%bets are bought and sold to the market, rather than the traders, which
-%sidesteps the problem of low liquidity in traditional markets. Another way to
-%avoid low liquidity is to use a market scoring rule: Liu, Wang, and
-%Chen~\cite{Liu2020} introduce Surrogate Scoring Rules to elicit private
-%probabilistic beliefs with access only to agents' reports, which is similar to
-%our setting. Their mechanisms do not rely on a ground truth to quantify the
-%quality of the elicited information, and could hence be particularly applicable
-%to decentralised prediction markets. Freeman et al.~\cite{CODiPM} take such a
-%decentralised approach and introduce a mechanism in which market outcomes are
-%crowdsourced by a group of arbiters. They derive the conditions under which
-%arbiters are incentivised to act truthfully, even if an arbiter reports on a
-%market where they themselves hold a stake, and theirs is the paper upon which
-%we base our design. Several other decentralised markets exist: Peterson et
-%al.~\cite{Peterson2015} study the setting to implement the decentralised oracle
-%behind the prediction market \emph{Augur}~\cite{Augur}, which uses a reputation
-%system to protect against manipulation. Similar markets based on
-%cryptocurrencies exist in \emph{Gnosis}~\cite{Gnosis} and
-%\emph{Hivemind}~\cite{Hivemind}, though it has not been shown that any of these
-%achieve any theoretical guarantees of truthfulness.
-
-
+Other prediction markets existed in \emph{PredictIt}~\cite{PredictIt} and
+\emph{InTrade}~\cite{InTrade}, both offering markets for various political and
+economic events. However, both experienced disputes largely related to the
+wording of the available to trade and the ambiguity in their resolution. For
+example, a bet offered on \emph{PredictIt} was, ``Who will be Senate-confirmed
+Secretary of State on March 31, 2018?'', and although Rex Tillerson was fired
+in the middle of March, he was officially the secretary of state until midnight
+of the 31st, leading to confusion among users in what they are trading on and
+therefore inaccuracies in the predictions it elicited. This will be a problem
+inherent to any prediction market that allows users to specify their own bets,
+and while the work of Freeman et al.~\cite{Freeman2017} evades the problem of
+determining the outcome by setting it to the proportion of users reporting a
+``yes'' outcome, this does nothing to penalise the initial creator for
+introducing an ambiguous market.

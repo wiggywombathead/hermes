@@ -64,6 +64,8 @@
 		   :get-portfolio-expired-securities
 		   :get-portfolio
 
+		   :get-reporting-history
+
 		   :get-num-reports
 		   :get-arbiter-reports
 		   :get-arbiter-beliefs
@@ -102,7 +104,7 @@
 		   (security :col-type security)
 		   (shares :col-type :integer
 				   :initform 0)
-		   (report :col-type (or :char :null))
+		   (report :col-type (or :integer :null))
 		   (positive-belief :col-type (or :double :null))
 		   (negative-belief :col-type (or :double :null))))
 
@@ -339,6 +341,31 @@
 								  :security security))))
 		  (push (list security shares) portfolio))))
 	portfolio))
+
+(defun get-securities-reported-by-user (user)
+  " get all securities that USER has reported on "
+  (with-open-database
+	(select-dao 'security (inner-join 'user-security
+									  :on (:= :security.id :user-security.security-id))
+				(where (:and (:= :user-security.user-id (user-id user))
+							 (:not-null :user-security.report))))))
+
+(defun get-reporting-history (user)
+  " return a list ((security report outcome) ...) of what USER reported vs what
+  the security's actual outcome was "
+  (let ((securities (get-securities-reported-by-user user))
+		security-reports)
+	(dolist (security securities)
+	  (with-open-database
+		(let ((report (user-security-report
+						(find-dao 'user-security
+								  :user user
+								  :security security)))
+			  (outcome (security-outcome security)))
+		  ;(format T "~A reported ~A, outcome was ~A~%" (user-name user) report outcome)
+		  (if outcome
+			(push (list security report outcome) security-reports)))))
+	security-reports))
 
 (defun get-arbiters (security)
   " get all users who reported an outcome of SECURITY "

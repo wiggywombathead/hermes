@@ -8,6 +8,8 @@
   (:use :cl :util)
   (:export :one-over-prior
 		   :one-over-prior-midpoint
+		   :calculate-positive-belief
+		   :calculate-negative-belief
 		   :signal-positive-posterior-i
 		   :signal-negative-posterior-i
 		   :calculate-k
@@ -49,6 +51,38 @@
 				  report-j
 				  k
 				  (/ (+ mu1 mu0) 2)))
+
+(defun calculate-positive-belief (reporting-history)
+  " calculate Pr[Si=1|X=1] give the list REPORTING-HISTORY of the form
+  ((security report outcome) ...) "
+
+  ;; first only get the reports where the outcome was positive
+  (let ((positive-outcomes (remove-if-not #'(lambda (x) (>= 0.5 (third x)))
+										  reporting-history))
+		positive-reports)
+
+	;; now count the number of times the user reported a positive outcome
+	(setf positive-reports (count T (mapcar #'(lambda (x) (equal 1 (second x)))
+											positive-outcomes)))
+	(if positive-outcomes
+	  (/ positive-reports (length positive-outcomes))
+	  1)))
+
+(defun calculate-negative-belief (reporting-history)
+  " calculate Pr[Si=1|X=0] given the list REPORTING-HISTORY of the form
+  ((security report outcome) ...)" 
+
+  ;; first only get the reports where the outcome was negative
+  (let ((negative-outcomes (remove-if-not #'(lambda (x) (< 0.5 (third x)))
+										  reporting-history))
+		positive-reports)
+
+	;; now count the number of times the user reported a positive outcome
+	(setf positive-reports (count T (mapcar #'(lambda (x) (equal 1 (second x)))
+											negative-outcomes)))
+	(if negative-outcomes
+	  (/ positive-reports (length negative-outcomes))
+	  1)))
 
 (defun signal-positive-posterior-i
   (prior positive-belief-i negative-belief-i positive-belief-j negative-belief-j)

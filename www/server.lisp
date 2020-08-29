@@ -822,10 +822,27 @@
 		(positive-belief (/ (parse-integer (parameter "positive_belief")) 100))
 		(negative-belief (/ (parse-integer (parameter "negative_belief")) 100))
 		(session-user (session-value 'session-user))
+		reporting-history
 		security)
 
 	(setf security (db:get-security-by-id id))
-	(db:report-market-outcome session-user security report positive-belief negative-belief)
+
+	(setf reporting-history (db:get-reporting-history session-user))
+
+	;; TODO: make sure this is above/below mu1 and mu0, respectively
+	(setf positive-belief (arb:calculate-positive-belief reporting-history))
+	(setf negative-belief (arb:calculate-negative-belief reporting-history))
+
+	(format T "POSITIVE BELIEF: ~D~%NEGATIVE BELIEF: ~D~%"
+			positive-belief
+			negative-belief)
+
+	(db:report-market-outcome
+	  session-user
+	  security
+	  report
+	  positive-belief
+	  negative-belief)
 
 	(standard-page
 	  (:title "")
@@ -927,7 +944,7 @@
 
 	;; for each random pair of arbiters:
 	;;	- retrieve their report
-	;;  - compute their signal (positive/negtive) posterior beliefs
+	;;  - compute their signal (positive/negative) posterior beliefs
 	;; compute signal positive posterior mu1 and signal negative posterior mu0
 	;;  - mu1: Pr[Sj=1|Si=1]
 	;;	- mu0: Pr[Sj=1|Si=0]
