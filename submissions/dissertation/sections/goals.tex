@@ -77,5 +77,48 @@ market becoming swamped with overly subjective wagers.
 
 \subsection{Motivation}
 
-As discussed, there are already numerous decentralised markets that exist in
-the literature.
+As discussed, there are already numerous prediction markets that exist in the
+literature. The Iowa Electronic Markets are the longest running and arguably
+most successful, but the options offered to the users on which to trade are too
+restrictive. This is a similar issue among all centralised markets, including
+InTrade, PredictIt, and the Hollywood Stock Exchange. While their success can
+be attributed to their narrow focus on a particular topic, it seems more
+interesting to be able to aggregate information from a wider variety of themes,
+sacrificing perhaps some of the predictive accuracy for more widespread
+forecasts to be made.
+
+Decentralised prediction markets are not a new concept, however current
+examples in the literature lack in the functionality they offer. In the case of
+\emph{Omen}, while they allow any user to create a market, they rely on a
+single oracle to determine the outcome of the event. This leaves a single point
+of ``failure'' in the system and leaves it open to being manipulated. For
+example, listing a biased news source as the oracle could have a significant
+effect on the event's outcome. Although this is mitigated somewhat by
+displaying to traders the oracle chosen, this still encourages them to trade on
+how they believe the oracle will report the market and not necessarily the
+market itself. The mechanism by which \emph{Augur} determines market outcomes
+appears to be an improvement over this, in which multiple reporters from the
+community back their report of the market outcome with \$REP tokens, thus
+implementing a form of reputation system. However, it does not deal with
+ambiguous bets elegantly, offering the option for a report a market's
+outcome as ``invalid''. Given the inevitability of such markets in a
+decentralised setting, this is a key weakness to \emph{Augur}.
+
+It is therefore well justified to implement the decentralised peer prediction
+mechanism of Freeman et al. This not only allows users to create markets for
+any event they see fit, but also crowdsources market outcomes by relying on
+reports from the community. Thus instead of relying on a single source of
+information, which leaves it vulnerable to reporting biases particularly for
+more ambiguous or subjective bets, it gets a more complete picture of how the
+users themselves, who are the ones interacting with the market, observed the
+outcome. This can average out the biases present in any one news source. This
+also seems to be a better method to deal with ambiguity than in \emph{Augur},
+since the outcome of the market can be influenced by a reporter's
+interpretation of a wager. Another issue with \emph{Augur} is that it has not
+been shown to achieve any theoretical guarantees, which should be a key
+consideration in an environment in which rational selfish agents are
+interacting. Instead, the market we implement is proven to be incentive
+compatible, meaning it it in a user's best interests to report market outcomes
+truthfully and not attempt to manipulate it for their own gain. Although the
+mechanism is not budget balanced, it can be fully subsidised by a trading fee
+on each transaction, further making it practical and self-sufficient.

@@ -79,8 +79,8 @@
 
 			  ;; Here we determine the transaction cost based on quantity desired
 			  ;; and whether we are buying or selling
-			  ;; We cannot simply use q* and q since the interface only allows
-			  ;; users to enter a positive number
+			  ;; We cannot simply use q* and q since the form only allows users
+			  ;; to enter a positive number
 			  (if (stringp quantity) (setf quantity (parse-integer quantity)))
 			  (if (stringp q) (setf q (parse-integer q)))
 			  (let ((q* (if buying-p
@@ -127,57 +127,6 @@
 
 ;;; Webpage functions
 
-(defun javascript-functions ()
-  (ps
-	(set-timer)
-
-	(defun set-timer ()
-	  " set the market closing function to execute when next market expires "
-	  (chain smackjack
-			 (ajax-set-timer #'(lambda (response)
-								 ;(alert (+ "setting timer to " (@ response seconds)))
-								 (set-timeout (lambda ()
-												;(alert (+ "\"" (@ response security) "\" has expired"))
-												; TODO: call close-market
-												(chain location (reload)))
-											  (* (@ response seconds) 1000))))))
-
-	(defun display-projected-cost (response)
-	  " asynchronously update projected transaction cost "
-	  (setf (chain document (get-element-by-id :projected) inner-h-t-m-l)
-			(@ response cost)))
-
-	(defun ajax-transaction-cost-create ()
-	  " calculate transaction cost when creating market "
-	  (let ((quantity (chain document (get-element-by-id :quantity) value)))
-		(chain smackjack (ajax-transaction-cost-quantity
-						   quantity
-						   0
-						   T
-						   display-projected-cost))))
-
-	(defun ajax-transaction-cost-trade ()
-	  " calculate transaction cost when trading in market "
-	  (let ((quantity (chain document (get-element-by-id :quantity) value))
-			(q (chain document (get-element-by-id :old-shares) value))
-			(radios (chain document (get-elements-by-name "buying")))
-			checked
-			buying-p)
-
-		;; find which radio button is checked
-		(loop for option in radios do
-			  (if (@ option checked)
-				(setf checked (@ option value))))
-
-		;; checked is equal to 1 if "buy" is selected
-		(setf buying-p (equal checked 1))
-
-		(chain smackjack (ajax-transaction-cost-quantity
-						   quantity
-						   q
-						   buying-p
-						   display-projected-cost))))))
-
 (defmacro standard-page ((&key title) &body body)
   " template for a standard webpage "
   `(with-html-output-to-string
@@ -192,12 +141,6 @@
 			  (:meta :http-equiv "Content-Type"
 					 :content "text/html;charset=utf-8")
 
-			  ;; style
-			  ;(:link :rel "stylesheet"
-			  ;	   :href "https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"
-			  ;	   :integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk"
-			  ;	   :crossorigin="anonymous")
-
 			  ;; fonts
 			  (:link :rel "stylesheet"
 					 :href "https://fonts.googleapis.com/css?family=Merriweather")
@@ -209,7 +152,7 @@
 			  ;; javascript
 			  (str (generate-prologue *ajax-processor*))
 			  (:script :src "https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js")
-			  (:script :type "text/javascript" (str (javascript-functions)))
+			  (:script :type "text/javascript" (str (js:main-script)))
 
 			(:body
 			  (:ul :id "navbar"

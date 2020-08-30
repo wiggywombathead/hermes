@@ -7,77 +7,104 @@
 % - bookmaker
 % - parimutuel market
 
+% preselecting users
+% number of users to report?
+
 \label{sec:design}
 
-\subsection{Tools}
+\subsection{Mechanism Overview}
 
-The project is implemented in Common Lisp and the code has been developed and
-tested within the Steel Bank Common Lisp (SBCL) compiler and runtime system.
-Code version control has been achieved with Git and Github.  Writing the web
-application has required the use of several libraries available from the
-library manager Quicklisp, specifically:
+As mentioned our design of the prediction market is based on the peer
+prediction mechanism proposed by Freeman et al.~\cite{Freeman2017}. In this
+section we will present the main ideas presented in their work and give an
+overview of the mechanism itself.
 
-\begin{itemize}
-	\itemsep0em
-	\item Hunchentoot
-	\item CL-WHO
-	\item Mito
-	\item SXQL
-	\item Parenscript
-	\item Smackjack
-\end{itemize}
-
-Hunchentoot provides the environment on which we host the server. Most
-importantly it provides automatic session handling, allowing for multiple users
-to be logged in at once, and easy access of GET and POST parameters, enabling
-interaction via HTML forms. To generate the webpages, we use CL-WHO, which
-converts Lisp statements into strings of valid HTML. Defining webpages while
-remaining in the Lisp environment means we may use Lisp's macro system to build
-abstractions for both defining structure and processing data in one interface.
-
-Mito and SXQL provide the ability to connect to and interact with a Relational
-Database Management System (RDBMS). We use MySQL, though this choice is largely
-immaterial given our simple requirements of the database.
-
-Parenscript incorporates Javascript into the site with the goal of improving
-user experience. Currently it is only used to ensure that all necessary fields
-during market creation, trading, and market resolution are non-empty to avoid
-sending incomplete data to the server. It will be used to a greater degree in
-the future to ensure responsiveness: all information displayed to the user must
-be current to ensure that users are interacting with an up-to-date state of the
-system. We therefore plan to make more use of Parenscript and Smackjack, an
-AJAX library for Lisp, to allow for asynchronous interaction with the server.
-This will include, for example, continuously updating a stock's price or
-calculating the cost of a transaction without a page refresh, and stronger
-client-side validation.
-
-\subsection{System Overview}
-
-We implement the mechanism for peer prediction introduced by Freeman et
-al~\cite{CODiPM}. In this section we will introduce the main ideas they present
-and give an overview of the mechanism itself.
-
-We are interested in setting up a prediction market for the outcome of the
-binary event (random variable) $X \in \{0,1\}$. The terms ``market'' and
-``security'' are used interchangeably to refer to the entity comprising a wager
-(e.g. ``Arsenal will beat Tottenham'') and a deadline -- these two pieces of
-information are all we need to represent event $X$. The mechanism is divided
-into two main stages: the market stage, where users may buy and sell shares in
-the securities whose deadlines have not yet passed; and the arbitration stage,
-where a subset of the users report on the outcome of the security and we
-compute the payout price per share held. A key feature of this mechanism is
-that users may act as arbiters in markets in which they themselves hold shares.
+We are interested in setting up a prediction market for outcome of a binary
+random variable $X \in \{0,1\}$. We will use the terms ``market'', ``stock'',
+and ``security'' interchangeably throughout to refer to the entity comprising a
+wager, such as ``Arsenal will beat Tottenham'', and a deadline -- these two
+pieces of information are all we need to represent the event $X$. The mechanism
+is divided into two main stages: the market stage, where users may buy and sell
+shares in the securities whose deadlines have not yet passed; and the
+arbitration stage, where a subset of the users report on the outcome of the
+security and the payout price per share is computed. In a traditional
+prediction market on binary events, if the market's outcome was positive then
+stakeholders with long positions will then be paid out \$1 for each share they
+own while those with short positions will buy back their shares at a price of
+\$1 per share. Similarly, if the outcome was negative, long users will have
+lost money since they receive no money back from their initial investment,
+while short users will profit as they must ``buy back'' their shares at a price
+of \$0 per share. This market is different in that market outcomes are set as
+the proportion of users that reported a positive outcome. Therefore, even if a
+user has gone long on a security, this must have been at or below the right
+price to make a profit, since it is not necessarily the case that 100\% of the
+users reporting on the market agree on its outcome.
 
 Since we rely heavily on user participation for the mechanism to run correctly,
 it is important that users act in the desired manner. This mechanism
-incentivises truthful reporting in the arbitration stage, whereby it is in a
-user's best interests to report what they truly believe a market's outcome to
-be and not attempt to manipulate the system, even if the user is a stakeholder
-in the market. It also allows us to achieve certain guarantees, such as a bound
-on the amount we must pay to arbiters to reward them for participation, which
-serves as a guide when setting system parameters.
+incentivises users to act truthfully in two aspects: firstly, users are
+encouraged to trade on their belief of the market's realised outcome, rather
+than, for example, how a specific news source will report on it, since this
+outcome is determined entirely by the community, each individual of which will
+have access to their own news sources of varying biases; secondly, it is in a
+user's best interests to report on market outcomes truthfully, since they can
+receive no better payoff by attempting to manipulate the system. The same is
+true even if an otherwise rogue reporter held a position in the market.
+Therefore, we are able to gather accurate public sentiment on the event itself
+as well as its outcome, and ambiguous securities are dealt with more gracefully.
+
+These considerations also allow us to achieve certain useful guarantees. For
+example, in order to incentivise reporters to act truthfully, we must pay them
+more than what they would otherwise gain from attempting to manipulate the
+system. We can use this knowledge, coupled with what we know stakeholders are
+expecting to be paid out, in order to bound the amount we must pay to
+ensure incentive compatibility. In this way we can ensure that the system is
+sustainable and the system's loss is never unbounded.
+
+In the following sections, we shall outline the mechanism we implement from a
+theoretical standpoint.
 
 \subsubsection{Market Stage}
+
+The market stage allows users to create markets for any bet they desire and
+specifies the how the share price reacts according to user participation. As we
+implement a decentralised market, we place no restriction on the bet that can
+be placed (only that it is binary, i.e. it is ultimately either a ``yes'' or a
+``no''). In any market, there are two sides to any trade: one side offers some
+number shares, while there is some party that must be willing to purchase this
+number of shares at this price. There are a number of options for implementing
+such a trading mechanism, as we will detail in the following section.
+
+There are a  number of options for implementing a market trading mechanism:
+these include as a continuous double auction, market call auction, or by using
+an automated market maker. A continuous double auction (CDA) is a method by
+which buyers are matched with sellers of a stock. The market maker keeps an
+order book that tracks the bids, submitted by those looking to buy a stock, and
+the asks, submitted by those looking to sell a stock. For example, suppose
+Alice says she wishes to buy a share of stock $A$ for \$5, while Bob owns a
+share of stock \$A and is willing to sell it for \$5. The former is recorded as
+a bid, and the latter an ask. If the bid an ask for two traders match then the
+trade is executed: Alice pays Bob \$5 and receive a single share of stock $A$,
+and Bob is paid \$5 and gives away his share. Continuous double auctions are
+traditionally used in highly liquid markets, where there are many bids for a
+given ask (and vice versa), such as the New York Stock Exchange. An issue with
+this approach, however, is that it relies on high liquidity -- that is, it
+requires that there is always a willing buyer and seller for a particular price
+at a particular quantity of shares. Especially in a prediction market, most
+prediction markets have far fewer participants than a stock exchange: if Alice
+is willing to sell a share of stock $A$ for \$6 but no one is willing to buy at
+that price, then a trade cannot be executed. Such a mechanism relies on other
+sellers to offer shares at lower prices, and eventually Alice will adjust her
+ask to the market rate. This is therefore reliant on the market being liquid,
+which is not always possible in a prediction market, especially when bets are
+made on niche topics.
+
+To avoid these problems of illiquidity, one can use an automated market maker,
+in which a price maker is (nearly) always willing to accept both buy and sell
+orders at a certain price. It is possible that this price changes with the
+user's interaction with the market.
+
+%%%%%%%%%%%%%%%%%%%
 
 The market stage allows users to create markets for any event they wish and
 trade shares in these markets. Since we crowdsource outcome determination,
@@ -196,4 +223,48 @@ now simply Equation~\ref{eq:oneOverPrior} with $\mu$ replaced by $(\mu_1 +
 \mu_0)/2$. This guarantees the incentives for arbiters are the same regardless
 of their signal.
 
+
+
+
+\subsection{Tools}
+
+The project is implemented in Common Lisp and the code has been developed and
+tested within the Steel Bank Common Lisp (SBCL) compiler and runtime system.
+Code version control has been achieved with Git and Github.  Writing the web
+application has required the use of several libraries available from the
+library manager Quicklisp, specifically:
+
+\begin{itemize}
+	\itemsep0em
+	\item Hunchentoot
+	\item CL-WHO
+	\item Mito
+	\item SXQL
+	\item Parenscript
+	\item Smackjack
+\end{itemize}
+
+Hunchentoot provides the environment on which we host the server. Most
+importantly it provides automatic session handling, allowing for multiple users
+to be logged in at once, and easy access of GET and POST parameters, enabling
+interaction via HTML forms. To generate the webpages, we use CL-WHO, which
+converts Lisp statements into strings of valid HTML. Defining webpages while
+remaining in the Lisp environment means we may use Lisp's macro system to build
+abstractions for both defining structure and processing data in one interface.
+
+Mito and SXQL provide the ability to connect to and interact with a Relational
+Database Management System (RDBMS). We use MySQL, though this choice is largely
+immaterial given our simple requirements of the database.
+
+Parenscript incorporates Javascript into the site with the goal of improving
+user experience. Currently it is only used to ensure that all necessary fields
+during market creation, trading, and market resolution are non-empty to avoid
+sending incomplete data to the server. It will be used to a greater degree in
+the future to ensure responsiveness: all information displayed to the user must
+be current to ensure that users are interacting with an up-to-date state of the
+system. We therefore plan to make more use of Parenscript and Smackjack, an
+AJAX library for Lisp, to allow for asynchronous interaction with the server.
+This will include, for example, continuously updating a stock's price or
+calculating the cost of a transaction without a page refresh, and stronger
+client-side validation.
 
