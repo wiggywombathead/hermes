@@ -82,7 +82,7 @@
 											negative-outcomes)))
 	(if negative-outcomes
 	  (/ positive-reports (length negative-outcomes))
-	  1)))
+	  0)))
 
 (defun signal-positive-posterior-i
   (prior positive-belief-i negative-belief-i positive-belief-j negative-belief-j)

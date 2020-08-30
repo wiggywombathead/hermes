@@ -795,22 +795,6 @@
 						(:input :type :radio :value 0
 								:name "report") "No"))
 				 (:tr
-				   (:th "Positive Belief")
-				   (:td (:input :type :number
-								:step 1
-								:min mu1-min
-								:max 100
-								:value mu1-min
-								:name "positive_belief") "%"))
-				 (:tr
-				   (:th "Negative Belief")
-				   (:td (:input :type :number
-								:step 1
-								:min 0
-								:max mu0-max
-								:value mu0-max
-								:name "negative_belief") "%"))
-				 (:tr
 				   (:td :colspan 2
 						(:input :type :submit :value "Submit")))))))))
 
@@ -819,23 +803,19 @@
   (start-session)
   (let ((id (parameter "id"))
 		(report (parameter "report"))
-		(positive-belief (/ (parse-integer (parameter "positive_belief")) 100))
-		(negative-belief (/ (parse-integer (parameter "negative_belief")) 100))
 		(session-user (session-value 'session-user))
 		reporting-history
+		positive-belief
+		negative-belief
 		security)
 
 	(setf security (db:get-security-by-id id))
 
 	(setf reporting-history (db:get-reporting-history session-user))
 
-	;; TODO: make sure this is above/below mu1 and mu0, respectively
+	;; TODO: ensure mu1 >= mu > mu0
 	(setf positive-belief (arb:calculate-positive-belief reporting-history))
 	(setf negative-belief (arb:calculate-negative-belief reporting-history))
-
-	(format T "POSITIVE BELIEF: ~D~%NEGATIVE BELIEF: ~D~%"
-			positive-belief
-			negative-belief)
 
 	(db:report-market-outcome
 	  session-user

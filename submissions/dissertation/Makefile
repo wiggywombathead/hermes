@@ -6,7 +6,7 @@ FILES = $(wildcard sections/*.tex)
 
 OUT = $(MAIN)
 
-$(OUT).pdf: $(FILES) bibliography.bib
+$(OUT).pdf: $(FILES) dissertation.tex bibliography.bib
 	$(LATEX) $(MAIN).tex
 	$(BIBTEX) $(MAIN)
 	$(LATEX) $(MAIN).tex
