@@ -62,9 +62,9 @@ ensure incentive compatibility. In this way we can ensure that the system is
 sustainable and the system's loss is never unbounded.
 
 In the following sections, we shall outline the mechanism we implement from a
-theoretical standpoint.
+theoretical standpoint. 
 
-\subsubsection{Market Stage}
+\subsection{Market Stage}
 
 The market stage allows users to create markets for any bet they desire and
 specifies the how the share price reacts according to user participation. As we
@@ -75,118 +75,135 @@ number shares, while there is some party that must be willing to purchase this
 number of shares at this price. There are a number of options for implementing
 such a trading mechanism, as we will detail in the following section.
 
+\subsubsection{Market Scoring Rules}
+
+\label{sec:marketScoringRules}
+
 There are a  number of options for implementing a market trading mechanism:
 these include as a continuous double auction, market call auction, or by using
 an automated market maker. A continuous double auction (CDA) is a method by
 which buyers are matched with sellers of a stock. The market maker keeps an
 order book that tracks the bids, submitted by those looking to buy a stock, and
-the asks, submitted by those looking to sell a stock. For example, suppose
-Alice says she wishes to buy a share of stock $A$ for \$5, while Bob owns a
-share of stock \$A and is willing to sell it for \$5. The former is recorded as
-a bid, and the latter an ask. If the bid an ask for two traders match then the
-trade is executed: Alice pays Bob \$5 and receive a single share of stock $A$,
-and Bob is paid \$5 and gives away his share. Continuous double auctions are
-traditionally used in highly liquid markets, where there are many bids for a
-given ask (and vice versa), such as the New York Stock Exchange. An issue with
-this approach, however, is that it relies on high liquidity -- that is, it
-requires that there is always a willing buyer and seller for a particular price
-at a particular quantity of shares. Especially in a prediction market, most
-prediction markets have far fewer participants than a stock exchange: if Alice
-is willing to sell a share of stock $A$ for \$6 but no one is willing to buy at
-that price, then a trade cannot be executed. Such a mechanism relies on other
-sellers to offer shares at lower prices, and eventually Alice will adjust her
-ask to the market rate. This is therefore reliant on the market being liquid,
-which is not always possible in a prediction market, especially when bets are
-made on niche topics.
+the asks, submitted by those looking to sell a stock. Traders arrive
+asynchronously and place orders, and when two opposite orders match the trade
+is executed. Continuous double auctions are traditionally used in highly
+liquid markets, where there are many bids for a given ask (and vice versa),
+such as the New York Stock Exchange. An issue with this approach, however, is
+that it relies on high liquidity -- that is, it requires that there is always a
+willing buyer and seller for a particular price at a particular quantity of
+shares. Especially in a prediction market, most prediction markets have far
+fewer participants than a stock exchange: if Alice is willing to sell a share
+of stock $A$ for \$6 but no one is willing to buy at that price, then a trade
+cannot be executed. This problem can be particularly severe in a combinatorial
+market, where a trader's attention is split between exponentially many
+securities. Traders may also be hesitant to participate in a market organised
+as a continuous double auction, since their participation at a particular price
+encourages others to participate at a lower price thus depriving them of
+profit. Prices may therefore not be informative, and instead only reflect the
+game traders are playing with one another.
 
 To avoid these problems of illiquidity, one can use an automated market maker,
 in which a price maker is (nearly) always willing to accept both buy and sell
 orders at a certain price. It is possible that this price changes with the
-user's interaction with the market.
+user's interaction with the market. This ensures that participants are always
+able to make a trade, thus ``making'' the market. Typically this is not used in
+real-money markets since always assuming the opposite side to any given trade
+would likely result in losses for the house; in play-money markets this is not
+such an issue as losses are less detrimental, but prices must still be adjusted
+to ensure losses are bounded. Two options arise for implementing an automated
+market maker: Market Scoring Rules (MSR) and parimutuel markets. We are
+interested in the former.
 
-%%%%%%%%%%%%%%%%%%%
+Suppose our market contains $|\Omega|$ mutually exclusive and exhaustive
+securities. Let $q_j$ be the total quantity of shares held by all traders of
+security $j$, and let $\vect{q} = (q_1, \ldots, q_{|\Omega|})$. At the heart of
+a Market Scoring Rule is the cost function $C(\vect{q})$, which is a means of
+recording the total amount of money spent by traders as a function of the total
+number of shares in circulation. An agent wishing to purchase $q_j' - q_j$
+shares of security $j$, increasing the number of shares of security $j$ to
+$q_j'$, would then pay $C(\vect{q}_{-j}, q_j') - C(\vect{q})$.\footnote{We use
+$\vect{q}_{-j}$ to denote the vector $(q_1, \ldots, q_{j-1}, q_{j+1}, \ldots,
+q_{|\Omega|})$.} This model also accommodates selling shares, in which case
+$q_j' < q_j$. We cannot use $C$ to quote a share price to the user, since we
+first need to know the quantity of shares they wish to buy or sell: instead, we
+use its derivative $p = \partial C / \partial q_j$, which gives the cost for
+purchasing an infinitesimal quantity of shares. Just as we cannot use $C$ to
+quote individual share price, we cannot use $p$ to calculate the cost of
+transaction, since a user's interaction with the market will automatically have
+an effect on share price as, in practice, they are not purchasing an
+infinitesimal quantity.
 
-The market stage allows users to create markets for any event they wish and
-trade shares in these markets. Since we crowdsource outcome determination,
-there is no restriction placed on the types of bets users may make other than
-that their result is a ``yes'' or a ``no''. Ambiguous bets are allowed, though
-likely to suffer in the arbitration stage, since users may have different
-interpretations on the outcome.
+\subsubsection{Trading fees}
 
-In order to create a market for a user-specified event, we use a \emph{market
-scoring rule (MSR)}, which is a means of assigning a probability to a set of
-mutually outcomes. After the wager and deadline have been specified, the MSR
-simply takes into account the number of shares bought and sold and returns a
-probability $p \in [0,1]$. This describes the perceived likelihood amongst
-users of the event having a positive outcome. We can also use this to set the
-share price of the security.  Using a MSR is different from a traditional
-market in that there is not a fixed number of shares in circulation: instead,
-buying into a market increases the total number of shares and selling decreases
-it. Let $q$ denote the total number of shares of a given security. An agent
-wishing to buy $q'-q$ shares (i.e. increasing the total number of shares to
-$q'$) will pay $C(q')-C(q)$, for our choice of convex, differentiable,
-monotonically increasing scoring rule $C$. We may tune the behaviour of this
-cost function by using a liquidity parameter $b$, such that $C_b(q) := b \cdot
-C(q/b)$, which controls the responsiveness of $C$. A lower value of $b$ means
-that the share price changes more quickly for fewer shares bought, and vice
-versa.
+In addition to implementing a Market Scoring Rule to quote the share price of a
+given security and calculate the necessary payments for buying or selling
+shares in a given market, the market stage is responsible for implementing
+trading fees. As mentioned, the mechanism we implement is not budget balanced,
+meaning the market must be subsidised in order to pay the correct winnings to
+stakeholders when market outcomes are realised. Trading fees are therefore used
+to raise these subsidies. For any given market, buying shares will push the
+share price $p$ upwards towards \$1, while selling shares will push it towards
+\$0. There are two types of transactions that a user may be involved in: one in
+which a trader is increasing their risk, and one in which a user is liquidating
+shares it has previously bought or sold. For example, suppose Alice holds ten
+shares in a particular security: if she were to sell up to and including ten
+shares she would simply be liquidating shares that have already been sold to
+her, while if she were to buy additional shares or sell more than ten, then she
+would be increasing her risk. Risk transactions are defined analogously for a
+user buying shares. Trading fees are only imposed on transactions in which a
+user increases their risk, and can be viewed as a fee on the worst-case loss
+incurred by the agent. Specifically, for fixed system parameter $f$ and for
+transactions in which a user increases their risk, a buy transaction that
+pushes share price to $p$ incurs an additional charge of $fp$, while a sell
+transaction that pushes share price to $p$ incurs additional charge of
+$f(1-p)$. Users may trade shares in a given security as long as they have
+enough funds to make the transaction (including the fee), and as long as the
+deadline has not yet passed. After the market expires, stakeholders' positions
+are final and we then determine the outcome of the market via peer prediction
+in the arbitration stage.
 
-The market stage implements trading fees in order to raise the funds necessary
-to pay stakeholders when the event's outcome is realised, and to reward users
-for participation in the arbitration stage. Buying shares pushes the share
-price $p$ towards \$1, while selling shares pushes it towards \$0, and the fee
-can be interpreted as a fee on the worst-case loss that an agent incurs. For a
-fixed parameter $f$, a ``buy'' transaction that pushes the share price to $p$
-incurs an additional charge of $fp$, while a ``sell'' transaction incurs a
-charge of $f(1-p)$. Transactions are only charged a fee when the user increases
-their risk: if they are simply liquidating their position (selling shares they
-own or buying back shares they have sold) then no fee is charged.  Users may
-trade in the market as long as they have enough funds to make the transaction
-and the deadline for the event has not passed. After the deadline has expired
-the users' positions are final and we move on to determining the outcome of the
-event in the arbitration stage.
+\subsection{Arbitration Stage}
 
-\subsubsection{Arbitration Stage}
-
-The arbitration stage is concerned with determining the perceived outcome of
-event $X$ by taking reports from a subset of the users in the system, known as
-the arbiters. Each arbiter $i$ receives a (private) signal $x_i \in \{0,1\}$
-that tells them the result of the event -- this is analogous to reading the
-news, watching the match, or even hearing about it from a friend. They then
-submit a report $\hat{x}_i \in \{0,1\}$ to the system that tells us what they
-believe the outcome to be. Note that since the signal they receive is private,
-we have no way to know whether the user is reporting what they truly believe,
-or whether they are trying to manipulate the system for their own gain.
-Arbiters are then paired randomly, and paired arbiters $i$ and $j$ are paid a
-reward of $u(\hat{x}_i, \hat{x}_j)$ according to the ``1/prior with midpoint''
+The arbitration stage is concerned with determining the perceived outcome
+of the event $X$ from a subset of the total userbase, known as the
+``arbiters'', who offer reports on what they observed the outcome to be.
+Specifically, each arbiter $i$ receives a private signal $x_i \in \{0,1\}$ that
+tells them the result of the event -- this is analogous to reading the news,
+watching the match, even hearing about it from a friend, and will vary from
+market to market. The arbiter then submits a report $\hat{x}_i \in \{0,1\}$ to
+the system that tells it what they believe the outcome to be. Note that since
+the signal they receive is private information, we have no way of determining
+whether this report is what they truly observed, or whether they are trying to
+manipulate the system for their own gain. Instead, we incentivise arbiters to
+act truthfully by paying them a reward if their report agrees with another
+randomly chosen arbiter: for this we implement the ``1/prior with midpoint''
 mechanism, which we will detail below.
 
-We can now determine the outcome of the market. In a traditional prediction
-market, users are paid \$1 for each share owned (or they must buy shares back
-at \$1 if they have shorted the security) if the event has a positive outcome,
-and \$0 otherwise. Hence if an event is almost certain to occur, more users
-will buy shares than sell them, as they expect they will be paid out for
-holding shares in the market when the outcome is realised. This will push the
-share price towards \$1. Similarly, if an event is believed to be unlikely,
-more users will sell shares than buy them and the price will approach \$0. This
-prevents arbitrarily large profits being made for risk-free bets. In our market
-the outcome of an event is the random variable $\hat{X} \in [0,1]$ which is set
-to the proportion of arbiters that submit a report of $\hat{x}_i=1$.
-Stakeholders are then paid out in the usual way.
+Once all reports have been collected and the arbiters paid, the outcome of the
+market $\hat{X} \in [0,1]$ is set to the proportion of arbiters that reported a
+positive outcome. This differentiates this mechanism from traditional
+prediction markets, in which shares of a security will pay out \$1 if the event
+occurred, and \$0 otherwise. Stakeholders are then paid out in the usual, where
+those with long positions are paid out $\hat{X}$ for each share owned, while
+those with short positions must buy them back at $\hat{X}$ per share. This
+should not change how traders view the security: if they have information
+telling them the event will occur they will still buy into the market if the
+share price is appropriate, while if they believe the event is unlikely they
+will continue to sell. The mechanism simply accommodates for the ambiguous bets
+possible as a result of being made by the community.
 
 \subsubsection{1/prior mechanism}
 
-\label{sec:oneOverPrior}
-
-We use the 1/prior payment mechanism to reward users for submitting reports on
-the outcomes of events, with a modification to incentivise truthful reporting.
-The 1/prior payment mechanism was conceived by Jurca and
+We use a modified version of the 1/prior payment mechanism to reward users for
+submitting reports on an event's outcome and to incentivise truth telling
+behaviour. The original version was conceived by Jurca and
 Faltings~\cite{JurcaFaltings2008, JurcaFaltings2011} as a means of rewarding
-arbiters for participation in opinion polls, and Witkowski~\cite{Witkowski2014}
-generalises this mechanism to pay out different amounts depending on the
-signals reported by paired arbiters. For paired arbiters $i$ and $j$ with
-reports $\hat{x}_i$ and $\hat{x}_j$, the 1/prior mechanism pays $i$ and $j$ as
-a reward for reporting on the market outcome:
+arbiters for participation in opinion polls, another means of crowdsourcing a
+forecast in which users submit probabilistic estimates for the likelihood of
+events to occur. Witkowski~\cite{Witkowski2014} then generalised this to pay
+out different amounts depending on the signals reported by paired arbiters. For
+arbiters $i$ and $j$ with reports $\hat{x}_i$ and $\hat{x}_j$, the 1/prior
+mechanism pays a reward $u(\hat{x}_i, \hat{x}_j)$ as follows:
 
 \begin{equation}
 	\label{eq:oneOverPrior}
@@ -198,18 +215,22 @@ a reward for reporting on the market outcome:
 	\end{cases}
 \end{equation}
 
-in which $k$ is a parameter and $\mu$ is the (common) prior belief that $X=1$.
-A suitable value to use for $\mu$ would be the closing price for the market: if
-users feel an event is likely to happen the share price will be pushed towards
-\$1, while if they feel it is unlikely it will be pushed towards \$0.
+In this, $k$ is a parameter and $\mu$ is the common prior belief that $X=1$. A
+suitable value to use for $\mu$ in our case is the closing price of the market:
+if users feel the event is likely to occur they will buy shares of it, pushing
+the share price towards \$1, and if they feel it is unlikely it will be pushed
+towards \$0. Everyone can see this price, and if it differs from a user's
+beliefs they will participate in the market and alter the price accordingly,
+making it a sensible choice for the common prior.
 
-The modification to the 1/prior mechanism is simple though requires two extra
-values to be computed. Let $\mu_1^i$ be the probability that, given that agent
-$i$ receives a positive signal, another randomly chosen agent also receives a
-positive signal, and let $\mu_0^i$ be the probability that, given that agent
-$i$ receives a negative signal, another randomly chosen agent receives a
-positive signal. We require the ``update'' probabilities $\mu_1, \mu_0$ to be
-common across all agents, which we can achieve by simply taking:
+The modification introduced by Freeman et al.~\cite{Freeman2017} of the 1/prior
+mechanism is simple and requires two extra values to be computed. Let $\mu_1^i$
+be the probability that, given that agent $i$ receives a positive signal of the
+event's outcome, another randomly chosen user also receives a positive signal.
+Similarly, let $\mu_0^i$ be the probability that, given that agent $i$ receives
+a negative signal, another randomly chosen user receives a positive signal. We
+require a common value for these ``update'' probabilities across all agents, so
+we define the $\mu_1$ and $\mu_0$ as follows:
 
 \begin{equation}
 	\begin{gathered}
@@ -218,53 +239,82 @@ common across all agents, which we can achieve by simply taking:
 	\end{gathered}
 \end{equation}
 
-The modified payment method we use, the ``1/prior with midpoint'' mechanism, is
-now simply Equation~\ref{eq:oneOverPrior} with $\mu$ replaced by $(\mu_1 +
-\mu_0)/2$. This guarantees the incentives for arbiters are the same regardless
-of their signal.
+The modified payment mechanism is now simply Equation~\ref{eq:oneOverPrior}
+with $\mu$ replaced by $(\mu_1 + \mu_0)/2$. This is the
+``1/prior-with-midpoint'' mechanism and guarantees that the incentives for
+arbiters are always the same, no matter the signal they receive. The arbiter
+with the greatest incentive to misreport -- that is, an arbiter with a large
+stake in the market in which they are reporting -- has their incentive to
+misreport weakly decreased by using the midpoint $(\mu_1 + \mu_0)/2$ in the
+payment rule as opposed using $\mu$ in the standard version.
 
+In particular, suppose arbiter $i$ holds a position of $n_i$ securities in the
+market. We can ensure truthful reporting is a best response for $i$ by setting
+the 1/prior-with-midpoint parameter $k$ to the appropriate value such that they
+will receive weakly greater reward from the payment mechanism than they would
+by misreporting. With $m$ arbiters and $\delta = \mu_1 - \mu_0$, truthful
+reporting for arbiter $i$ is a best response if:
 
-
+\begin{equation}
+	\label{eq:kParameter}
+	k \ge \frac{2 |n_i|}{m \delta}
+\end{equation}
 
 \subsection{Tools}
 
-The project is implemented in Common Lisp and the code has been developed and
-tested within the Steel Bank Common Lisp (SBCL) compiler and runtime system.
-Code version control has been achieved with Git and Github.  Writing the web
-application has required the use of several libraries available from the
-library manager Quicklisp, specifically:
+% TODO
 
-\begin{itemize}
-	\itemsep0em
-	\item Hunchentoot
-	\item CL-WHO
-	\item Mito
-	\item SXQL
-	\item Parenscript
-	\item Smackjack
-\end{itemize}
-
-Hunchentoot provides the environment on which we host the server. Most
-importantly it provides automatic session handling, allowing for multiple users
-to be logged in at once, and easy access of GET and POST parameters, enabling
-interaction via HTML forms. To generate the webpages, we use CL-WHO, which
-converts Lisp statements into strings of valid HTML. Defining webpages while
-remaining in the Lisp environment means we may use Lisp's macro system to build
-abstractions for both defining structure and processing data in one interface.
-
-Mito and SXQL provide the ability to connect to and interact with a Relational
-Database Management System (RDBMS). We use MySQL, though this choice is largely
-immaterial given our simple requirements of the database.
-
-Parenscript incorporates Javascript into the site with the goal of improving
-user experience. Currently it is only used to ensure that all necessary fields
-during market creation, trading, and market resolution are non-empty to avoid
-sending incomplete data to the server. It will be used to a greater degree in
-the future to ensure responsiveness: all information displayed to the user must
-be current to ensure that users are interacting with an up-to-date state of the
-system. We therefore plan to make more use of Parenscript and Smackjack, an
-AJAX library for Lisp, to allow for asynchronous interaction with the server.
-This will include, for example, continuously updating a stock's price or
-calculating the cost of a transaction without a page refresh, and stronger
-client-side validation.
-
+%At the minimum we require the ability to host a web server, define webpages,
+%and interact with a database management system. We have chosen to implement the
+%project almost entirely in Common Lisp, for which there is a variety of
+%libraries offering such capabilities. Using only Common Lisp, as opposed to a
+%combination of, for example, HTML, PHP, and MySQL, allows us to remain in a
+%single uniform environment and make use of Lisp's powerful macro system and
+%functional style of programming. We also use Git and Github for version
+%control.
+%
+%The market has been developed and tested with the Steel Bank Common Lisp (SBCL)
+%compiler and runtime environment. From here we can use Quicklisp, a library
+%manager that provides 
+%
+%
+%The project is implemented in Common Lisp and the code has been developed and
+%tested within the Steel Bank Common Lisp (SBCL) compiler and runtime system.
+%Code version control has been achieved with Git and Github.  Writing the web
+%application has required the use of several libraries available from the
+%library manager Quicklisp, specifically:
+%
+%\begin{itemize}
+%	\itemsep0em
+%	\item Hunchentoot
+%	\item CL-WHO
+%	\item Mito
+%	\item SXQL
+%	\item Parenscript
+%	\item Smackjack
+%\end{itemize}
+%
+%Hunchentoot provides the environment on which we host the server. Most
+%importantly it provides automatic session handling, allowing for multiple users
+%to be logged in at once, and easy access of GET and POST parameters, enabling
+%interaction via HTML forms. To generate the webpages, we use CL-WHO, which
+%converts Lisp statements into strings of valid HTML. Defining webpages while
+%remaining in the Lisp environment means we may use Lisp's macro system to build
+%abstractions for both defining structure and processing data in one interface.
+%
+%Mito and SXQL provide the ability to connect to and interact with a Relational
+%Database Management System (RDBMS). We use MySQL, though this choice is largely
+%immaterial given our simple requirements of the database.
+%
+%Parenscript incorporates Javascript into the site with the goal of improving
+%user experience. Currently it is only used to ensure that all necessary fields
+%during market creation, trading, and market resolution are non-empty to avoid
+%sending incomplete data to the server. It will be used to a greater degree in
+%the future to ensure responsiveness: all information displayed to the user must
+%be current to ensure that users are interacting with an up-to-date state of the
+%system. We therefore plan to make more use of Parenscript and Smackjack, an
+%AJAX library for Lisp, to allow for asynchronous interaction with the server.
+%This will include, for example, continuously updating a stock's price or
+%calculating the cost of a transaction without a page refresh, and stronger
+%client-side validation.
+%

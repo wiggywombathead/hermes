@@ -24,12 +24,11 @@
 (defconstant +liquidity+ 10)	; TODO: tune this parameter
 
 (defun share-price (q)
-  " compute quote price of stock with Q outstanding shares -- not to be used to
-  calculate the price an agent must pay "
+  " computes share price p(q) "
   (/ (exp (/ q +liquidity+)) (1+ (exp (/ q +liquidity+)))))
 
 (defun q-price (q)
-  " computes price for Q shares of security "
+  " computes transaction cost C(Q) "
   (* +liquidity+ (log (1+ (exp (/ q +liquidity+))))))
 
 (defun transaction-cost (q* q)

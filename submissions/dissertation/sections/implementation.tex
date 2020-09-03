@@ -2,262 +2,733 @@
 
 \label{sec:implementation}
 
-As discussed, we have currently implemented both stages of the mechanism but
-are yet to tune the parameters required to achieve the truth-telling behaviour
-we desire. The system comprises four independent parts, each implementing a
-separate area of functionality, as follows:
+In this section we shall detail our implementation of the peer prediction
+mechanism. The system consists of five independent parts, each responsible for
+a separate area of functionality. These are as follows:
 
 \begin{enumerate}
-	\itemsep0em
 	\item Database
 	\item Trading
 	\item Arbitration
 	\item Server
+	\item User experience
 \end{enumerate}
 
 \subsection{Database}
 
-The database is implemented using the Mito library provided by Quicklisp. This
-is an object relational mapper that provides support for MySQL, PostgreSQL, and
-SQLite3. We can therefore define and interact with tables while staying
-completely within the Lisp ecosystem, leading to a quicker and more flexible
-development cycle.
+\subsubsection{Table Definitions}
 
-We use three tables: \code{USER}, which stores all users in the system and
-their remaining budget; \code{SECURITY}, which stores the wager, deadline,
-number of shares, and outcome of every user-created security; and
-\code{USER-SECURITY}, which is responsible for the many-to-many relationship
-between users and securities (i.e., each user may own shares in many
-securities). The latter allows us to store a user's position within a market as
-well as how they report on it during the arbitration stage, if they indeed
-decide to do so. The tables contain the following columns:
+The database is responsible for persistent storage. It is implemented using the
+Mito library provided by Quicklisp, which is an object relational mapper that
+provides support for MySQL, PostgreSQL, and SQLite3. This allows us to define
+and interact with the database tables while remaining within the Lisp
+ecosystem, leading to a quicker and more flexible development cycle.
+
+We define three tables that handle all interactions with the database:
+\code{USER}, which stores all users in the system and their remaining budget;
+\code{SECURITY}, which is stores the wager, deadline, number of shares, and
+final outcome for every user-created security; and \code{USER-SECURITY}, which
+is responsible for the many-to-many relationship that users may have with
+securities, and allows us to store user positions as well as reports once the
+deadline has passed. The table definitions are as follows:
 
 \begin{table}[ht]
 	\centering
 	\begin{tabular}{|c|c|c|}
 		\hline
-		\textbf{User} & Name & Budget \\ \hline
+		\textbf{User} & \emph{name} & \emph{budget} \\ \hline
 	\end{tabular} \\~\\
 
 	\begin{tabular}{|c|c|c|c|c|}
 		\hline
-		\textbf{Security} & Bet & Shares & Deadline & Outcome \\ \hline
+		\textbf{Security} & \emph{bet} & \emph{shares} & \emph{deadline} &
+		\emph{outcome} \\ \hline
 	\end{tabular} \\~\\
 
 	\begin{tabular}{|c|c|c|c|c|c|c|}
 		\hline
-		\textbf{User-security} & User & Security & Shares & Report & Positive Belief & Negative Belief \\ \hline
+		\textbf{User-security} & \emph{user} & \emph{security} & \emph{shares}
+		& \emph{report} & \emph{positive belief} & \emph{negative belief} \\
+		\hline
 	\end{tabular} \\~\\
 \end{table}
 
-An entry in the \code{USER} table consists of a username and a budget. There is
-currently no requirement to enter a password to log in to the system -- this
-has been done to speed up the testing process, and will be an easy addition in
-the future.
+An entry in the \code{USER} table consists of a username and a budget. All
+users currently start with \$100, which is of no real consequence since the
+market uses play-money. Currently there is no requirement to supply a password
+when logging; this has been done to speed up the testing process, and if
+required in the future this will be a simple addition to make.
 
-The columns in the \code{SECURITY} table contain all information to define a
-market in which users may trade: ``bet'' holds the wager that is being
-proposed, ``shares'' holds the number of shares which have been bought and
-sold, ``deadline'' holds the earliest date-time by which users can receive a
-signal on the wager's outcome, and ``outcome'' holds the payout price per share
-of the market, to pay out stakeholders.
+Securities are also simple entities to store, whose fields fully describe a
+market: \emph{bet} stores a string that specifies the wager being made;
+\emph{shares} stores the total number of shares (referred to as $q$ in
+Section~\ref{sec:marketScoringRules}); \emph{deadline} holds the date and time
+by which the event's outcome will have been realised; and \emph{outcome} is
+initially null and eventually set to the payout price per share, or the
+fraction of arbiters reporting a positive outcome, once the deadline has
+passed.
 
-An entry in the \code{USER-SECURITY} table stores the relationship between
-users and securities, whether this is the number of shares a user holds in a
-security, an arbiter's report on a security, or both. The ``user'' column
-holds the user ID, ``security'' holds the security ID, and the number of shares
-owned and their report (or NULL) are stored in the corresponding columns. The
-columns ``positive belief'' and ``negative belief'' store a user's estimations
-that, given they the event has a positive (respectively negative) outcome, they
-receive a positive signal. The manner in which this is used is detailed in
-Section~\ref{sec:arbitration}.
+The \code{USER-SECURITY} table is used to represent the mapping between users
+and securities, and is used to store a user's position in a given market as
+well as the outcome they have reported on its outcome, if they are indeed an
+arbiter for it. The columns are as follows: \emph{user} holds a reference to an
+entry in the \code{USER} table; \emph{security} holds a reference to an entry
+in the \code{SECURITY} table; \emph{shares} stores the user's position in this
+market if they have one, otherwise 0; \emph{report} stores the user's report on
+the outcome, if they are an arbiter for this security; and \emph{positive
+belief} and \emph{negative belief} represent how reliable a user's signals are,
+based on their previous reporting history. The manner in which we use the last
+two fields will be discussed in greater depth in Section~\ref{sec:arbitration}.
 
-Defining such tables using Mito is as simple as using the \code{deftable}
-macro, and is syntactically similar to defining a regular struct within Common
-Lisp. Listing~\ref{lst:deftable} shows how we define the columns and their
-associated datatypes. The macro defines default accessors\footnote{Functions
-for accessing members of a struct.}, the slots \code{created\_at},
-\code{updated\_at}, and a primary key \code{id} if none is specified. Insertion
-is similarly straightforward: to insert a new entry into a table we create an
-instance of the class that is implicitly defined when calling \code{deftable},
-then call \code{create-dao}. To retrieve records from the database we use
-either \code{select-dao}, which returns all records matching the conditions, or
-\code{find-dao}, which returns only the first.
+\subsubsection{Database Interface}
+
+We provide the interface with which we interact with the database in
+\code{database.lisp}. We first initialise the database by connecting to our
+choice of backend and then define the tables as in the previous section. We opt
+to use MySQL as the backend simply as it was already installed on the
+development machine, as well as some prior familiarity with the language.
+Tables are then created using the \code{deftable} macro supplied by Mito:
+syntactically, this is similar to vanilla Common Lisp's \code{defstruct} macro.
+Listing~\ref{lst:deftable} shows how we define the columns and their associated
+datatypes. The macro defines the default accessors\footnote{Functions for
+accessing members of a struct.}, the slots \code{created\_at} and
+\code{updated\_at}, and a primary key \code{id} if none is specified. As the
+listing shows, we can specify a previously defined table as the column
+datatype, in this case \code{user} and \code{security}, in order to model the
+foreign key relation in a straightforward manner. 
 
 \begin{lstlisting}[
 	label={lst:deftable},
-	language=lisp,
-	captionpos=b,
-	caption={Defining a table in Mito}]
-(deftable security ()
-    ((bet :col-type :text)
-     (shares :initform 0
-             :col-type :integer)
-     (deadline :col-type :datetime)
-     (outcome :col-type (or :double :null))))
+	caption={Defining the \code{USER-SECURITY} table in Mito}]
+(deftable user-security ()
+          ((user :col-type user)
+           (security :col-type security)
+           (shares :col-type :integer
+                   :initform 0)
+           (report :col-type (or :integer :null))
+           (positive-belief :col-type (or :double :null))
+           (negative-belief :col-type (or :double :null))))
 \end{lstlisting}
+
+Insertion is similarly straightforward: to insert a new entry into a table we
+simply create an instance of the structure that is implicitly defined when calling
+\code{deftable} then call \code{create-dao}. To retrieve records from the
+database we can use either \code{select-dao} or \code{find-dao}: the former
+returns all records satisfying the criteria provided, while the latter returns
+the first match.
+
+We design the interface to the database so that no custom queries need to be
+created outside of \code{database.lisp}. This ensures the code interacting with
+it can be kept as clean and simple as possible. We use another library from
+Quicklisp, SXQL, in order to build the more complex queries to the database.
+For example, Listing~\ref{lst:retrieveExpiring} shows how we retrieve all the
+securities whose deadline is yet to pass, in order of first to last to expire.
+We use the SXQL functions \code{where}, \code{:>}, \code{order-by}, and
+\code{:asc} that expand into the corresponding MySQL code for Mito to execute.
+
+\begin{lstlisting}[
+	label={lst:retrieveExpiring},
+	caption={Retrieving active markets using Mito and SXQL}]
+(defun get-expiring-securities (datetime)
+  " return all securities ordered by deadline, most imminent first "
+  (with-open-database
+    (select-dao 'security
+                (where (:> :deadline datetime))
+                (order-by (:asc :deadline)))))
+\end{lstlisting}
+
+For any interaction with the database, we need to establish a connection prior
+to the transaction and disconnect after it is complete. This gives us the
+opportunity to make use of Lisp's macro system: while it is a small example,
+since its use is so widespread it drastically reduces the number of lines and
+ensures we never forget to close a database connection. We define our macro
+\code{with-open-database} as in Listing~\ref{lst:databaseMacro}. Since the
+final statement in a function or macro definition in Lisp is the value returned
+by that block, we are able to open the connection, execute arbitrary code and
+store the final result in the variable \code{result}, then disconnect from the
+database and return the result of the transaction.
+
+\begin{lstlisting}[
+	label={lst:databaseMacro},
+	caption={Defining our \code{with-open-database} macro}]
+(defmacro with-open-database (&body code)
+  " execute CODE without worrying about the connection "
+  `(progn
+     (connect-database)
+     (let ((result (progn ,@code)))
+       (disconnect-database)
+       result)))
+\end{lstlisting}
+
+In order to enable the transactions in the following sections, when we first
+initialise the database we create a user with the name ``bank''. All money that
+is then to be collected from or paid out to users is done so through the bank,
+so that money is largely conserved. Although not so important for a play-money
+market, it does help to enforce a value on the currency we use as well as
+analyse the system's performance.
 
 \subsection{Trading}
 
-Trading allows users to create arbitrary bets on binary events and then trade
-shares in them. It also implements the trading fees on risk transactions
-required to raise funds to reward arbiters and pay out stakeholders. To
-calculate the trading fee, we first need to know whether the user is increasing
-their risk (a ``risk transaction'') or they are simply liquidating a position
-they already hold, and secondly whether they are buying or selling shares,
-since these incur different charges.
+Trading allows us to gather public sentiment on the user-defined securities,
+and this part of the system is responsible for setting share prices,
+calculating the cost of transactions, and charging fees to raise funds for the
+arbitration stage, to ensure arbiters are incentivised to report truthfully.
+These features are implemented in the files \code{msr.lisp} and
+\code{market.lisp}.
 
-To create markets, quote their share prices, and compute the cost of a
-transaction we use a market scoring rule. We use the commonly used Logarithmic
-Market Scoring Rule (LMSR), created by Robin Hanson~\cite{LMSR}. As we have
-mentioned, in any MSR an agent wishing to purchase $q'-q$ shares of a given
-security must pay $C(q')-C(q)$ for convex, differentiable, monotonically
-increasing function $C$. In the case of LMSR, for current number of shares $q$
-and liquidity parameter $b$, this function is:
+As discussed in Section~\ref{sec:marketScoringRules}, we will be using a Market
+Scoring Rule as our automated market maker. In order to achieve the guarantees
+of Freeman, Lahaie, and Pennock's mechanism we must use a scoring rule that is
+strictly proper, which can then be implemented as a market maker based on a
+convex cost function. We use the commonly-used Logarithmic Market Scoring Rule
+(LMSR) created by Robin Hanson~\cite{Hanson2007}, whose cost function is
+defined as follows:
 
 \begin{equation}
 	\label{eq:LMSR}
-	C_b(q) = b \log (1 + e^{q/b})
+	C(\vect{q}) = b \log \left( \sum_j e^{q_j/b} \right)
 \end{equation}
 
-This function also accommodates selling shares, in which case $q'<q$.  Since a
-user must specify a desired amount of shares to buy or sell before we can
-determine how much to charge them, we cannot use this function to directly
-quote a share price. Instead, we can calculate the cost of the transaction were
-the user to purchase a miniscule quantity of shares and quote this as the share
-price. This is simply the derivative of Equation~\ref{eq:LMSR} and is given by:
+This assumes that each security $j$ is one of a collection of mutually
+exclusive and exhaustive outcomes. Since we are only dealing with binary
+events, we can compute a share price based only on the number of shares bought
+for the positive outcome, and assume that buying shares in the negative outcome
+is equivalent to selling shares in the positive outcome. In this case, we have
+$\vect{q}=( 0 \quad q_1 - q_0 )$, where $q_0$ and $q_1$ are the quantity of
+shares bought by agents in the negative and positive outcomes, respectively.
+This gives us the following cost function for LMSR in the binary setting, where
+$q=q_1-q_0$:
+
+\begin{equation}
+	\label{eq:LMSRbinary}
+	C_b (q) = b \log (1 + e^{q/b})
+\end{equation}
+
+In these cost functions, $b$ appears as a parameter that allows us to control
+the responsiveness of $C$. A lower value of $b$ corresponds to a more sensitive
+share price, meaning the price will change more quickly for smaller
+transactions. It also controls the market's risk of loss: for markets with
+$|\Omega|$ outcomes it can be shown that the maximum loss incurred by the
+market maker is $b \log |\Omega|$. Recall that to compute the actual cost to
+charge an agent for a transaction, we compute $C_b(q')-C_b(q)$ for an agent
+wishing to take the total quantity of shares from $q$ to $q'$, and this also
+encodes sell transactions. The share price function is the derivative of the
+cost function, which is in our case:
 
 \begin{equation}
 	\label{eq:LMSRprice}
-	p_b(q) = \frac{ e^{q/b} }{ 1 + e^{q/b} }
+	p_b(q) = \frac{e^{q/b}}{1+e^{q/b}}
 \end{equation}
 
-Although Equation~\ref{eq:LMSRprice} quotes the share price, it is not accurate
-to use it to calculate how much an agent should pay, since the agent's
-participation in the market will immediately change this price. It does,
-however, provide a useful means of describing to the user the perceived
-likelihood of the event. For example for some security, at $q=0$ an equal
-number of shares have been bought as have been sold, meaning the userbase as a
-whole is equally unsure about whether the market will have a positive or
-negative outcome. The quoted share price will be $p(0)=\$0.50$.  Similarly,
-suppose $b=10$ and $q=20$, meaning twenty more shares have been bought than
-sold in the market. This would yield a share price of $p_{10}(20) \approx
-\$0.88$. Users feel more confident that the event will have a positive outcome,
-since more people have bought shares, giving a higher share price. As mentioned
-in Section~\ref{sec:oneOverPrior}, we interpret the closing price of the market
-as the probability of a positive outcome, as it approximates how sure users
-feel about the event's outcome.
+Upon market creation a user is only given the option to buy a positive number
+of shares -- otherwise, it would make more sense for the user to create a
+market for the opposite outcome. After this, the custom security is created and
+is open for all other users to trade in. The share price reflects the strength
+of the community's opinion on the event's outcome: for example, at $q=0$ then
+the community is exactly split on whether the event will have a positive
+outcome, and appropriately $p_b(0)=\$0.50$ for any $b$. Meanwhile, for $q=20$
+and $b=10$ this means twenty more shares have been bought than sold in the
+market and would yield a quoted share price of $p_{10}(20) \approx \$0.88$.
+Users feel more confident that the event will be positive, thus pushing the
+price upwards. This could assure some agent that the event will have a positive
+outcome. Suppose they wish to buy ten more shares in the market: they would
+then be required to pay $C_{10}(30)-C_{10}(20)=10 \log (\frac{1+e^3}{1+e^2})
+\approx \$9.22$. Such an action in the market would push the share price to
+$p(30) \approx \$0.95$. Users may also be required to pay a fee on their
+transaction, in order to subsidise the arbitration stage.
+Figure~\ref{fig:marketCreation} shows the interface for creating a new market,
+while Figure~\ref{fig:transactionSummary} shows an example of the transaction
+summary that a user is presented with after having done so.
 
 \begin{figure}[h]
 	\centering
-	\includegraphics[width=.8\textwidth]{market-creation}
-	\caption{Creating a market for the wager, ``The weather will be hot on
-	Friday''}
+	\includegraphics[width=\textwidth]{market-creation}
+	\caption{The interface for creating a new market}
 	\label{fig:marketCreation}
 \end{figure}
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=\textwidth]{transaction-summary}
+	\caption{Users are presented with a transaction summary upon creating a new
+	market}
+	\label{fig:transactionSummary}
+\end{figure}
+
+Fees are only charged on transactions where an agent increases their risk: this
+means they are either buying or selling a greater number of shares than their
+current position. For example, a user owning ten shares and selling five would
+incur no extra cost since they are liquidating a position they have already
+invested in, while selling more than ten or buying additional shares would
+incur an additional cost. The fee serves a secondary purpose in bounding the
+price of the security away from \$0 and \$1, as a potential trader would be
+spending more than \$1 or less than \$0 to buy or sell the shares. For example,
+even if an agent were to buy an infinitesimal number of shares, meaning their
+transaction cost would be given by the share price function $p$, if the share
+price was \$0.99 and the transaction fee was set to 5\%, they would be required
+to pay $\$0.99 \cdot 1.05 = 1.0395$, greater than the maximum possible payout.
 
 \subsection{Arbitration}
 
 \label{sec:arbitration}
 
-The arbitration stage of the mechanism seeks to resolve markets whose deadlines
-have passed by gathering reports from arbiters and paying out, or demanding
-money from, stakeholders. Since we will eventually be able to accommodate for
-users to act as arbiters in market in which they themselves hold a position, we
-allow any user to opt in to become an arbiter in an unresolved market.
-Figure~\ref{fig:dashboard} shows the dashboard as it appears to a logged in
-user, in which they are presented with all the currently active and unresolved
-markets. 
+\subsubsection{Computing signal reliability}
+
+The arbitration stage is where we resolve market outcomes using arbiter reports
+and pay out winnings to, or demand payment from, stakeholders in the security.
+Since the mechanism incentivises arbiters to act truthfully even if an arbiter
+themselves holds a stake in the market, we decide to let anyone opt in to
+reporting on the outcome. Once a market's deadline has passed the security will
+be listed as an expired market and the user is presented with the option to act
+as an arbiter, as in Figure~\ref{fig:expiredMarket}. After doing so, they may
+then input their observed signal, or indeed a lie, as
+Figure~\ref{fig:reportOutcome} shows.  Once the required number of reports have
+been collected, we move onto rewarding arbiters for submitting reports and
+computing the final outcome of the market.
 
 \begin{figure}[h]
 	\centering
-	\includegraphics[width=.8\textwidth]{dashboard}
-	\caption{A user's dashboard, where they can see all active and unresolved
-	markets}
-	\label{fig:dashboard}
+	\includegraphics[width=\textwidth]{expired-market}
+	\caption{Users may opt in to report on market outcomes}
+	\label{fig:expiredMarket}
 \end{figure}
-
-Once the user has opted in to arbitration they are taken to a form to submit
-their report on the outcome, as well as estimations on their ``Positive
-Belief'' and ``Negative Belief''. These are estimations of probabilities that,
-given that the event \emph{actually} had a positive (respectively negative)
-outcome, the user received a positive signal. This is important as we need to
-take into account signal noise, given that wagers can be subjective: while the
-positive and negative signal beliefs will be nearer to 1 and 0, respectively,
-for an event such as the winner of a football match, since it will likely be
-covered by many media outlets all reporting the true result, this may not
-necessarily be the case where the outcome is more a matter of opinion. The
-weakness of this approach is discussed in Section~\ref{sec:evaluation}.
 
 \begin{figure}[h]
 	\centering
-	\includegraphics[width=.8\textwidth]{arbitration}
-	\caption{The interface for submitting a report as an arbiter}
-	\label{fig:resolveSecurity}
+	\includegraphics[width=\textwidth]{report-outcome}
+	\caption{The interface by which arbiters report market outcomes}
+	\label{fig:reportOutcome}
 \end{figure}
 
-These signal beliefs are used to compute the update probabilities $\mu_1$ and
-$\mu_0$ which are used in the 1/prior-with-midpoint mechanism. Given the
-closing price $\mu$ and the positive and negative signal beliefs
-$Pr[x_i=1|X=1]$ and $Pr[x_i=1|X=0]$ for each arbiter $i$, we can compute the
-positive update $\mu_1^i$ for each $i$ and randomly chosen $j$ as follows:
+Arbiters are rewarded by being paid a certain amount of money only if their
+report agrees with another randomly chosen arbiter. The reward is determined by
+the 1/prior-with-midpoint mechanism, where instead of using the common
+prior probability $\mu$ we use the update probabilities $\mu_1$ and $\mu_0$.
+Recall that these are the probability that, given that arbiter $i$ receives a
+positive signal so too does another randomly chosen arbiter $j$, and the
+probability that, given that $i$ receives a negative signal, another randomly
+chosen arbiter $j$ receives a positive signal. Since we cannot assume arbiters
+to act truthfully, this is more complicated than simply counting the types of
+reports received. Instead, we use information about signal error rates
+$Pr[x_i=1|X=1]$ and $Pr[x_i=1|X=0]$ based on past market outcomes and past
+reporting behaviour for each arbiter $i$. This is a fairly involved process:
+first we gather all securities that have been reported on in the past by $i$
+and whose outcome has been determined; we then iterate through each one of
+these returned securities and determine the report that $i$ submitted as well
+as its outcome, and push this into a list of results. At the end of this stage
+we have a list \code{((security report outcome) ...)} that describes the
+arbiter's report and the market's true (peer-determined) outcome for each
+security for which they have acted as an arbiter. The code implementing this is
+show in Listing~\ref{lst:reportingHistory}.
+
+\begin{lstlisting}[
+	label={lst:reportingHistory},
+	caption={Gathering a user's reporting history}]
+(defun get-securities-reported-by-user (user)
+  (with-open-database
+    (select-dao 'security (inner-join 'user-security
+                                      :on (:= :security.id
+                                              :user-security.security-id))
+                (where (:and (:= :user-security.user-id (user-id user))
+                             (:not-null :security.outcome)
+                             (:not-null :user-security.report))))))
+
+(defun get-reporting-history (user)
+  (let ((securities (get-securities-reported-by-user user))
+        security-reports)
+	(dolist (security securities)
+	  (with-open-database
+	    (let ((report (user-security-report
+	                    (find-dao 'user-security
+	                              :user user
+	                              :security security)))
+              (outcome (security-outcome security)))
+	      (if outcome
+            (push (list security report outcome) security-reports)))))
+	security-reports))
+\end{lstlisting}
+
+We then use this history to compute the probability that, assuming the arbiter
+has always acted truthfully, their signal has been correct in telling them the
+true outcome of the event. We refer to these probabilities, $Pr[x_i=1|X=1]$ and
+$Pr[x_i=1|X=0]$, as a arbiter $i$'s positive and negative signal beliefs as a
+remnant of a previous implement. Listing~\ref{lst:positiveBelief} shows how we
+calculate an arbiter's positive belief, with a similar method applying for
+computing the negative belief: for the arbiter's history restricted to the
+securities whose outcome was reported as positive by the majority of arbiters,
+we count the number of times this arbiter also reported a positive outcome,
+thus giving us the arbiter's signal error probability given we know the outcome
+is (more likely to have been) positive. If there have been no positive
+outcomes, then we assume the arbiter has a perfect signal. Calculating the
+negative signal belief is done in a similar manner: first we collect items of
+the arbiter's reporting history where the security was mostly reported as a
+negative outcome, then we count the number of times this arbiter submitted a
+positive report. Again we assume in the lack of markets with negative outcomes
+that the arbiter has a perfect signal. We repeat this to compute the positive
+and negative signal beliefs for each arbiter.
+
+\begin{lstlisting}[
+	label={lst:positiveBelief},
+	caption={Computing an arbiter's positive signal belief given
+	their reporting history}]
+(defun calculate-positive-belief (reporting-history)
+  ;; first only get the reports where the outcome was positive
+  (let ((positive-outcomes (remove-if-not #'(lambda (x) (>= 0.5 (third x)))
+                                          reporting-history))
+        positive-reports)
+
+    ;; now count the number of times the user reported a positive outcome
+    (setf positive-reports (count T (mapcar #'(lambda (x) (equal 1 (second x)))
+                                            positive-outcomes)))
+    (if positive-outcomes
+      (/ positive-reports (length positive-outcomes))
+      1)))
+\end{lstlisting}
+
+We use this information about the reliability of each arbiter's signal, along
+with the prior probability $\mu$ that the event had a positive outcome, to
+compute the update probabilities $\mu_1$ and $\mu_0$, used in the
+1/prior-with-midpoint mechanism. We use these to compute the update
+probabilities $\mu_1^i$ for each arbiter $i$, using a randomly chosen peer
+arbiter $j$, as follows:
 
 \begin{equation}
+	\label{eq:updateProbabilities}
 	\begin{aligned}
 		\mu_1^i & = Pr[x_j=1|x_i=1] \\
 		& = Pr[x_j=1|X=0] \cdot Pr[X=0|x_i=1] + Pr[x_j=1|X=1] \cdot Pr[X=1|x_i=1]
 	\end{aligned}
 \end{equation}
 
-We use the same approach to compute the negative update $\mu_0^i$ for each $i$,
-and hence we may now also compute the common updates $\mu_1$ and $\mu_0$ to pay
-arbiters the correct reward for arbitration. Once done, we set the outcome of
-the market to the fraction of arbiters that reported a positive outcome, paying
-users who hold shares and taking money from users that sold shares short.
+We use the same approach to compute $\mu_0^i$ for each $i$. The final values of
+$\mu_1$ and $\mu_0$ are then calculated by taking the minimum and maximum
+across all $\mu_1^i$ and $\mu_0^i$, respectively.
+
+\subsubsection{Rewarding the arbiters}
+
+We may now pair arbiters randomly to pay them via the 1/prior-with-midpoint
+mechanism. We first retrieve two lists from the database: the first is the list
+of all arbiter reports and is of the form \code{arbiter-reports = ((arbiter
+report) ...)}; the second is a list of all arbiter signal beliefs and is of the
+form \code{arbiter-beliefs = ((arbiter positive-belief negative-belief) ...)}.
+Since we will be pairing arbiters randomly and still need efficient access to
+these values, we then create two hash tables associating an arbiter to their
+report and their beliefs, giving us \code{report[i] = report} and
+\code{beliefs[i] = (positive-belief negative-belief)} for each $i$. The
+market's outcome is simply set to the proportion of arbiters that reported a
+positive outcome. At this point we pay out the appropriate winnings to
+stakeholders, paying out money to those who hold shares and demanding money
+from those who have gone short. The former group are looking to be paid out at
+a price higher than the level at which they bought the shares, while the latter
+are hoping to buy back their shares at a lower level than their ``in'' price.
+Now that the market's outcome has been determined it will no longer be listed
+as an unresolved market on the user's dashboard.
+
+\begin{lstlisting}[
+	label={lst:marketOutcome},
+	caption={Computing the market outcome}]
+(let ((reports (mapcar #'second arbiter-reports)))
+  ;; the payoff of each share held is the fraction of arbiters reporting 1
+  (setf outcome (float (/ (count 1 reports) (length reports)))))
+\end{lstlisting}
+
+We next compute the random pairing of arbiters. Lisp has no function to shuffle
+a list, so we implement the Fisher-Yates~\cite[pg.~26-27]{FisherYates1938}
+algorithm ourselves as the \code{shuffle} function in
+Listing~\ref{lst:randomPairing}. The random pairing is then formed by walking
+through the shuffled list and collecting adjacent elements as pairs.
+
+\begin{lstlisting}[
+	label={lst:randomPairing},
+	caption={Assigning arbiters to peers randomly}]
+(defun shuffle (lst)
+  " shuffle LST randomly (without modifying it) "
+  (let ((lst (copy-list lst)))
+    (loop for i from (length lst) downto 2 do
+          (rotatef (elt lst (random i))
+                   (elt lst (1- i))))
+    lst))
+
+(defun random-pairing (lst)
+  " randomly pair items from LST together if length(lst) is even "
+  (if (evenp (length lst))
+    (loop for (a b) on (shuffle lst) by #'cddr while b
+          collect (list a b))))
+\end{lstlisting}
+
+For each set of paired arbiters we then retrieve their reports and signal
+beliefs from the hash tables and compute, for each arbiter $i$ in the pair, the
+values of $\mu_1^i$ and $\mu_0^i$ according to
+Equation~\ref{eq:updateProbabilities}, where the randomly chosen $j$ is simply
+the partner with whom they have been paired. We push these values to a list so
+we may then compute the minimum value of $\mu_1^i$ and maximum value of
+$\mu_0^i$ across all arbiters. Finally to compute the smallest $k$ to satisfy
+Equation~\ref{eq:kParameter} we set $k = \max_i 2|n_i|/m\delta$, and use this
+to pay arbiters according to Equation~\ref{eq:oneOverPrior}.
 
 \subsection{Server}
 
-The code contained in \code{server.lisp} is responsible both for setting up and
-maintaining the Hunchentoot web server and defining the various pages and forms
-with which users interact.  Hunchentoot makes interaction with the web server
-straightforward. We initialise the server by creating an \code{easy-acceptor},
-and once we have defined our webpages using CL-WHO we simply push them to the
-dispatch table using \code{create-prefix-dispatcher} so that they may be
-accessed. Hunchentoot also provides us with automatic session handling, meaning
-we do not have to worry about the details of logging in users on different
-machines at the same time: we simply define the symbol \code{session-user} in
-the appropriate session-handling data structure, then set this to the logged in
-user. We can then access this using \code{(session-value 'session-user)} to
-display different material on the page and interact with the database according
-to the current user. Finally, we use Hunchentoot to access the GET and POST
-parameters users send to the server via forms with a call to the library's
-\code{parameter} function. 
+The code from each of the separate areas of the market is then drawn together
+in the file \code{server.lisp}, in which we set up the web server, define the
+webpages, and call the functions from the different interfaces we provide.
 
-Although there is little special to CL-WHO compared to other HTML-generating
-libraries, it is useful to remain in the Lisp environment to define webpages
-since we may use its powerful macro system. We use it to define a template for
-a standard page, meaning we only need to specify the elements that make the
-page unique and giving the web application a consistent style. This also
-enables us to define pages and add the corresponding HTML generating function
-to the dispatch table all within a single interface, hiding the unnecessary
-details. Listing~\ref{lst:defineURL} shows how we are able to define both the
-webpage, generate its content, and push it to the dispatch table in one.
-
-The code in \code{server.lisp} draws together the interfaces from other areas
-of the system and actually executes the mechanism. This involves taking user
-input to create custom markets, quote share prices, and collect and distribute
-payments for the various interactions users may have with the market.
+We use Hunchentoot to host the web server. At startup this involves creating an
+instance of a Hunchentoot \code{easy-acceptor}, which opens up a port of our
+choosing to accept requests. Doing so also initialises the dispatch table,
+which is a list containing the functions to execute when the corresponding
+webpage is loaded. We can specify webpages to the dispatch table by using
+Hunchentoot's \code{create-prefix-dispatcher} function: this simply takes a URL
+and the function to execute when that URL is loaded. Here is again the
+opportunity to make use of Lisp's macro system: the code in
+Listing~\ref{lst:defineURL} shows a macro that defines a function and a URL of
+the same name, creates a dispatcher from them and pushes it to the dispatch
+table. This again not only saves rewriting repetitive code but also keeps the
+codebase clear and logical -- the URL \code{/index} is served by a function
+called \code{index}. Now each time we wish to define a new webpage we need only
+to call \code{define-url-fn} followed by the name of the page and the
+instructions to execute.
 
 \begin{lstlisting}[
 	label={lst:defineURL},
-	language=lisp,
-	captionpos=b,
-	caption={Defining webpages}]
+	caption={Macroising URL functions}]
 (defmacro define-url-fn ((name) &body body)
+  " creates handler NAME and pushes it to *DISPATCH-TABLE* "
   `(progn
-     (defun ,name () ,@body)
-     (push (create-prefix-dispatcher ,(format NIL "/~(~a~)" name) ',name)
+     ;; define the handler
+     (defun ,name ()
+       ,@body)
+
+     ;; add the handler to the dispatch table
+     (push (create-prefix-dispatcher
+             ,(format NIL "/~(~A~)" name) ',name)
            *dispatch-table*)))
 \end{lstlisting}
 
+To define the content of the webpages we use CL-WHO\footnote{Common Lisp With
+HTML Output.}, translates Lisp statements into strings of valid HTML. Since we
+are aiming for a uniform style across all webpages -- for example, with a
+consistent navigation bar, a content section, and all the same preamble -- this
+is another opportunity to make use of Lisp's macro system, to avoid code
+duplication and improve the abstraction to the code. In this vein we define the
+\code{standard-page} macro, an abridged version of which is given in
+Listing~\ref{lst:standardPage}. This allows us to concisely define webpages
+with a similar look and feel in a concise manner, and only requires us to
+specify the content that makes the page unique via the \code{body} parameter.
 
+\begin{lstlisting}[
+	label={lst:defineURL},
+	caption={Macroising webpage definitions}]
+(defmacro standard-page ((&key title) &body body)
+  " template for a standard webpage "
+  `(with-html-output-to-string
+     (*standard-output* NIL :prologue T :indent T)
+     (:html :xml\:lang "en"
+            :lang "en
+            (:head (:title title)
+                   (:link :href "/style.css" :type "text/css" :rel "stylesheet")
+                   ;; rest of preamble ... )
+            (:body
+              (:ul :id "navbar"
+                   (:li ... ))
+              (:div :class "container"
+                    ...
+                    (:div :class "content"
+                          ,@body))))))
+\end{lstlisting}
+
+Another feature of Hunchentoot ... 
+
+% session handling
+% sending data e.g. (parameter ...)
+
+\subsection{User Experience}
+
+% AJAX and Javascript
+
+%Defining such tables using Mito is as simple as using the \code{deftable}
+%macro, and is syntactically similar to defining a regular struct within Common
+%Lisp. Listing~\ref{lst:deftable} shows how we define the columns and their
+%associated datatypes. The macro defines default accessors\footnote{Functions
+%for accessing members of a struct.}, the slots \code{created\_at},
+%\code{updated\_at}, and a primary key \code{id} if none is specified. Insertion
+%is similarly straightforward: to insert a new entry into a table we create an
+%instance of the class that is implicitly defined when calling \code{deftable},
+%then call \code{create-dao}. To retrieve records from the database we use
+%either \code{select-dao}, which returns all records matching the conditions, or
+%\code{find-dao}, which returns only the first.
+%
+%\begin{lstlisting}[
+%	label={lst:deftable},
+%	language=lisp,
+%	captionpos=b,
+%	caption={Defining a table in Mito}]
+%(deftable security ()
+%    ((bet :col-type :text)
+%     (shares :initform 0
+%             :col-type :integer)
+%     (deadline :col-type :datetime)
+%     (outcome :col-type (or :double :null))))
+%\end{lstlisting}
+%
+%\subsection{Trading}
+%
+%Trading allows users to create arbitrary bets on binary events and then trade
+%shares in them. It also implements the trading fees on risk transactions
+%required to raise funds to reward arbiters and pay out stakeholders. To
+%calculate the trading fee, we first need to know whether the user is increasing
+%their risk (a ``risk transaction'') or they are simply liquidating a position
+%they already hold, and secondly whether they are buying or selling shares,
+%since these incur different charges.
+%
+%To create markets, quote their share prices, and compute the cost of a
+%transaction we use a market scoring rule. We use the commonly used Logarithmic
+%Market Scoring Rule (LMSR), created by Robin Hanson~\cite{LMSR}. As we have
+%mentioned, in any MSR an agent wishing to purchase $q'-q$ shares of a given
+%security must pay $C(q')-C(q)$ for convex, differentiable, monotonically
+%increasing function $C$. In the case of LMSR, for current number of shares $q$
+%and liquidity parameter $b$, this function is:
+%
+%\begin{equation}
+%	\label{eq:LMSR}
+%	C_b(q) = b \log (1 + e^{q/b})
+%\end{equation}
+%
+%This function also accommodates selling shares, in which case $q'<q$.  Since a
+%user must specify a desired amount of shares to buy or sell before we can
+%determine how much to charge them, we cannot use this function to directly
+%quote a share price. Instead, we can calculate the cost of the transaction were
+%the user to purchase a miniscule quantity of shares and quote this as the share
+%price. This is simply the derivative of Equation~\ref{eq:LMSR} and is given by:
+%
+%\begin{equation}
+%	\label{eq:LMSRprice}
+%	p_b(q) = \frac{ e^{q/b} }{ 1 + e^{q/b} }
+%\end{equation}
+%
+%Although Equation~\ref{eq:LMSRprice} quotes the share price, it is not accurate
+%to use it to calculate how much an agent should pay, since the agent's
+%participation in the market will immediately change this price. It does,
+%however, provide a useful means of describing to the user the perceived
+%likelihood of the event. For example for some security, at $q=0$ an equal
+%number of shares have been bought as have been sold, meaning the userbase as a
+%whole is equally unsure about whether the market will have a positive or
+%negative outcome. The quoted share price will be $p(0)=\$0.50$.  Similarly,
+%suppose $b=10$ and $q=20$, meaning twenty more shares have been bought than
+%sold in the market. This would yield a share price of $p_{10}(20) \approx
+%\$0.88$. Users feel more confident that the event will have a positive outcome,
+%since more people have bought shares, giving a higher share price. As mentioned
+%in Section~\ref{sec:oneOverPrior}, we interpret the closing price of the market
+%as the probability of a positive outcome, as it approximates how sure users
+%feel about the event's outcome.
+%
+%\begin{figure}[h]
+%	\centering
+%	\includegraphics[width=.8\textwidth]{market-creation}
+%	\caption{Creating a market for the wager, ``The weather will be hot on
+%	Friday''}
+%	\label{fig:marketCreation}
+%\end{figure}
+%
+%\subsection{Arbitration}
+%
+%\label{sec:arbitration}
+%
+%The arbitration stage of the mechanism seeks to resolve markets whose deadlines
+%have passed by gathering reports from arbiters and paying out, or demanding
+%money from, stakeholders. Since we will eventually be able to accommodate for
+%users to act as arbiters in market in which they themselves hold a position, we
+%allow any user to opt in to become an arbiter in an unresolved market.
+%Figure~\ref{fig:dashboard} shows the dashboard as it appears to a logged in
+%user, in which they are presented with all the currently active and unresolved
+%markets. 
+%
+%\begin{figure}[h]
+%	\centering
+%	\includegraphics[width=.8\textwidth]{dashboard}
+%	\caption{A user's dashboard, where they can see all active and unresolved
+%	markets}
+%	\label{fig:dashboard}
+%\end{figure}
+%
+%Once the user has opted in to arbitration they are taken to a form to submit
+%their report on the outcome, as well as estimations on their ``Positive
+%Belief'' and ``Negative Belief''. These are estimations of probabilities that,
+%given that the event \emph{actually} had a positive (respectively negative)
+%outcome, the user received a positive signal. This is important as we need to
+%take into account signal noise, given that wagers can be subjective: while the
+%positive and negative signal beliefs will be nearer to 1 and 0, respectively,
+%for an event such as the winner of a football match, since it will likely be
+%covered by many media outlets all reporting the true result, this may not
+%necessarily be the case where the outcome is more a matter of opinion. The
+%weakness of this approach is discussed in Section~\ref{sec:evaluation}.
+%
+%\begin{figure}[h]
+%	\centering
+%	\includegraphics[width=.8\textwidth]{arbitration}
+%	\caption{The interface for submitting a report as an arbiter}
+%	\label{fig:resolveSecurity}
+%\end{figure}
+%
+%These signal beliefs are used to compute the update probabilities $\mu_1$ and
+%$\mu_0$ which are used in the 1/prior-with-midpoint mechanism. Given the
+%closing price $\mu$ and the positive and negative signal beliefs
+%$Pr[x_i=1|X=1]$ and $Pr[x_i=1|X=0]$ for each arbiter $i$, we can compute the
+%positive update $\mu_1^i$ for each $i$ and randomly chosen $j$ as follows:
+%
+%\begin{equation}
+%	\begin{aligned}
+%		\mu_1^i & = Pr[x_j=1|x_i=1] \\
+%		& = Pr[x_j=1|X=0] \cdot Pr[X=0|x_i=1] + Pr[x_j=1|X=1] \cdot Pr[X=1|x_i=1]
+%	\end{aligned}
+%\end{equation}
+%
+%We use the same approach to compute the negative update $\mu_0^i$ for each $i$,
+%and hence we may now also compute the common updates $\mu_1$ and $\mu_0$ to pay
+%arbiters the correct reward for arbitration. Once done, we set the outcome of
+%the market to the fraction of arbiters that reported a positive outcome, paying
+%users who hold shares and taking money from users that sold shares short.
+%
+%\subsection{Server}
+%
+%The code contained in \code{server.lisp} is responsible both for setting up and
+%maintaining the Hunchentoot web server and defining the various pages and forms
+%with which users interact.  Hunchentoot makes interaction with the web server
+%straightforward. We initialise the server by creating an \code{easy-acceptor},
+%and once we have defined our webpages using CL-WHO we simply push them to the
+%dispatch table using \code{create-prefix-dispatcher} so that they may be
+%accessed. Hunchentoot also provides us with automatic session handling, meaning
+%we do not have to worry about the details of logging in users on different
+%machines at the same time: we simply define the symbol \code{session-user} in
+%the appropriate session-handling data structure, then set this to the logged in
+%user. We can then access this using \code{(session-value 'session-user)} to
+%display different material on the page and interact with the database according
+%to the current user. Finally, we use Hunchentoot to access the GET and POST
+%parameters users send to the server via forms with a call to the library's
+%\code{parameter} function. 
+%
+%Although there is little special to CL-WHO compared to other HTML-generating
+%libraries, it is useful to remain in the Lisp environment to define webpages
+%since we may use its powerful macro system. We use it to define a template for
+%a standard page, meaning we only need to specify the elements that make the
+%page unique and giving the web application a consistent style. This also
+%enables us to define pages and add the corresponding HTML generating function
+%to the dispatch table all within a single interface, hiding the unnecessary
+%details. Listing~\ref{lst:defineURL} shows how we are able to define both the
+%webpage, generate its content, and push it to the dispatch table in one.
+%
+%The code in \code{server.lisp} draws together the interfaces from other areas
+%of the system and actually executes the mechanism. This involves taking user
+%input to create custom markets, quote share prices, and collect and distribute
+%payments for the various interactions users may have with the market.
+%
+%\begin{lstlisting}[
+%	label={lst:defineURL},
+%	language=lisp,
+%	captionpos=b,
+%	caption={Defining webpages}]
+%(defmacro define-url-fn ((name) &body body)
+%  `(progn
+%     (defun ,name () ,@body)
+%     (push (create-prefix-dispatcher ,(format NIL "/~(~a~)" name) ',name)
+%           *dispatch-table*)))
+%\end{lstlisting}

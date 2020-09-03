@@ -29,7 +29,6 @@
 		(* +trading-fee+ share-price)
 		(* +trading-fee+ (- 1 share-price)))
 
-	  ;; TODO: take into account the number of shares we are liquidating
 	  (if (or (and selling-p (> current-position 0) (<= (abs shares) current-position))
 			  (and buying-p (< current-position 0) (<= shares (abs current-position))))
 

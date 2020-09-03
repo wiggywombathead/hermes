@@ -310,7 +310,7 @@
 							 (:!= :user-security.shares 0))))))
 
 (defun get-portfolio-active-securities (user date)
-  " return a list of all securities held by USER whose deadline has not passed "
+  " return a list of all securities held by USER whose deadline is after DATE "
   (with-open-database
 	(select-dao 'security (inner-join 'user-security
 									  :on (:= :security.id :user-security.security-id))
@@ -319,7 +319,7 @@
 							 (:>= :security.deadline date))))))
 
 (defun get-portfolio-expired-securities (user date)
-  " return a list of all securities held by USER whose deadline has passed "
+  " return a list of all securities held by USER is before DATE "
   (with-open-database
 	(select-dao 'security (inner-join 'user-security
 									  :on (:= :security.id :user-security.security-id))
@@ -348,6 +348,7 @@
 	(select-dao 'security (inner-join 'user-security
 									  :on (:= :security.id :user-security.security-id))
 				(where (:and (:= :user-security.user-id (user-id user))
+							 (:not-null :security.outcome)
 							 (:not-null :user-security.report))))))
 
 (defun get-reporting-history (user)
@@ -362,7 +363,6 @@
 								  :user user
 								  :security security)))
 			  (outcome (security-outcome security)))
-		  ;(format T "~A reported ~A, outcome was ~A~%" (user-name user) report outcome)
 		  (if outcome
 			(push (list security report outcome) security-reports)))))
 	security-reports))

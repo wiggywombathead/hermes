@@ -56,19 +56,22 @@
 \DeclareMathOperator*{\argmax}{arg\,max}
 \DeclareMathOperator*{\argmin}{arg\,min}
  
+\usepackage{float}
 \usepackage{listings}
 
 \lstdefinestyle{mystyle}{
-    basicstyle=\ttfamily\footnotesize,
+    basicstyle=\ttfamily\small,
     showlines=false,
     breakatwhitespace=false,         
     breaklines=false,                 
     captionpos=b,                    
     keepspaces=false,                 
-    numbers=left,                    
     numbersep=5pt,                  
     showspaces=false,              
     showstringspaces=false,
+	language=Lisp,
+	float, floatplacement=H,
+	frame=single
 }
 
 \lstset{style=mystyle}
@@ -157,7 +160,7 @@
 \input{sections/background}
 \input{sections/goals}
 \input{sections/design}
-%\input{sections/implementation}
+\input{sections/implementation}
 %\input{sections/management}
 %\input{sections/evaluation}
 

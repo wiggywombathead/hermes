@@ -10,10 +10,13 @@
   - [ ] Gather signal priors from reporting history (not asking explicitly)
     - Produces an "average signal reliability" for each arbiter: probably good?
   - [x] Compute k correctly
-  - [ ] Compute f correctly
+  - [x] Compute f correctly - no need/requires much more analysis
   - [ ] Thought: only allow user to be arbiter if they have a position in
 	*some* market? -- would stop users just voting on outcomes (guaranteed
 	profits)
+  - [ ] k only needs to be set *if* arbiter holds position in same market. Now,
+	we can't simply not pay them, otherwise they'd have no reason to
+	participate, but how much to pay them?
 
 - [ ] Website
   - [x] Basic pages in Hunchentoot

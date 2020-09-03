@@ -63,5 +63,5 @@ table.striped tr:nth-child(odd) {
 }
 
 .required {
-	background-color: #fffc9c;
+	/* background-color: #fffc9c; */
 }
