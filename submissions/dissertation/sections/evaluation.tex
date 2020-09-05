@@ -2,57 +2,96 @@
 
 \label{sec:evaluation}
 
+\textbf{TODO}
+
 \subsection{Successes}
 
-One main and obvious success of the project so far is that it successfully
-implements a prediction market. This has required learning about the associated
-game theory literature on mechanism design and scoring rules markets, and
-although the project has taken a different shape since its proposal, a better
-working knowledge on the current landscape of algorithmic game theory was
-always a goal and has been achieved. An important point raised in the
-presentation was that the project is not necessarily interesting because it
-allows users to trade on predictions, but more so because it allows users to
-create their own markets while remaining robust to manipulation, hence the game
-theoretic, rather than strictly economic, approach.
+\subsection{Failures}
 
-The project has required learning the Lisp programming language having had no
-prior experience in it. Writing custom macros to abstract away unnecessary
-details in database interaction and HTML generation has provided particular
-satisfaction.
+\subsection{Reflection}
 
-\subsection{Improvements}
+\subsection{Next Steps}
 
-While there have been no particular failures of the project so far, there are
-areas of it which can be improved. There is an issue of efficiency in database
-access caused by an unfamiliarity with the Mito library. It is likely, however,
-that we will not be able to rectify this in time, as it currently causes no
-performance issues and there are more important tasks taking priority.
+\begin{itemize}
+	\item Features
+		\begin{itemize}
+			\item Penalty to create markets: don't want them created
+				willy-nilly
+			\item Graphs of price histories
+			\item Different types of markets e.g. categorical: simple change to scoring
+				rule, less simple change to arbitration mechanism
+			\item Grace period? Time \emph{before} event has expired but
+				outcome is being determined so users cannot trade in market?
+				Maybe this is not an issue
+			\item Can we make it combinatorial?
+		\end{itemize}
+	\item Improvements
+		\begin{itemize}
+			\item Budget issues: user should be unable to short a security if
+				they cannot cover liability.
+			\item Improve general coding style: separate into macros/functions more
+				(especially /close-market webpage)
+			\item Improve database interaction: e.g. in
+				Listing~\ref{lst:reportingHistory}
+			\item Exact strategy for when we have enough reports and can close a
+				market: how should this grow with growing userbase?
+			\item Don't store prices as floats
+		\end{itemize}
+	\item Usability
+		\begin{itemize}
+			\item Additional asynchronicity: price updates constantly
+		\end{itemize}
+\end{itemize}
 
-The frequency of supervisor meetings should be made more consistent as we
-approach the final stages of the project. Until this point this has not been an
-issue and was anticipated over the summer examination period, however as we
-begin work on the final report a more steady opportunity to discuss problems
-and receive feedback will become more useful. Although the irregularity of
-meetings can be attributed in part to the remote working situation, the
-facilities exist for meetings to be held remotely and should be used to a
-greater degree as we approach the project's end.
-
-There are also design aspects of the system that are worth improving. The
-requirement for users to supply their estimates of signal accuracy is an issue:
-it is unreasonable to ask for such estimations, and also opens up the
-opportunity for users to manipulate the mechanism, which is the very behaviour
-we wished to avoid. This is a weakness of the mechanism from Freeman et
-al.~\cite{CODiPM}, and the issue arises as the signal posteriors are assumed to
-be known by the system. In practice this is not possible since we have no way
-of knowing the nature of where users get their signals. This problem could be
-alleviated by calculating these probabilities based on past reporting and
-market outcome histories, removing the interaction required from the user. It
-would also be worth exploring the use of the Surrogate Scoring Rules introduced
-by Liu et al.~\cite{Liu2020}, given that they do not need access to a ground
-truth to score predictions. This could be particularly useful since a minor
-issue of the mechanism we implement is that it is somewhat aged. This is not of
-much concern, since no similar prediction market exists in a practical
-implementation, however it would be interesting to improve on its shortcomings
-using results and approaches from more recent works.
-
-
+%\subsection{Successes}
+%
+%One main and obvious success of the project so far is that it successfully
+%implements a prediction market. This has required learning about the associated
+%game theory literature on mechanism design and scoring rules markets, and
+%although the project has taken a different shape since its proposal, a better
+%working knowledge on the current landscape of algorithmic game theory was
+%always a goal and has been achieved. An important point raised in the
+%presentation was that the project is not necessarily interesting because it
+%allows users to trade on predictions, but more so because it allows users to
+%create their own markets while remaining robust to manipulation, hence the game
+%theoretic, rather than strictly economic, approach.
+%
+%The project has required learning the Lisp programming language having had no
+%prior experience in it. Writing custom macros to abstract away unnecessary
+%details in database interaction and HTML generation has provided particular
+%satisfaction.
+%
+%\subsection{Improvements}
+%
+%While there have been no particular failures of the project so far, there are
+%areas of it which can be improved. There is an issue of efficiency in database
+%access caused by an unfamiliarity with the Mito library. It is likely, however,
+%that we will not be able to rectify this in time, as it currently causes no
+%performance issues and there are more important tasks taking priority.
+%
+%The frequency of supervisor meetings should be made more consistent as we
+%approach the final stages of the project. Until this point this has not been an
+%issue and was anticipated over the summer examination period, however as we
+%begin work on the final report a more steady opportunity to discuss problems
+%and receive feedback will become more useful. Although the irregularity of
+%meetings can be attributed in part to the remote working situation, the
+%facilities exist for meetings to be held remotely and should be used to a
+%greater degree as we approach the project's end.
+%
+%There are also design aspects of the system that are worth improving. The
+%requirement for users to supply their estimates of signal accuracy is an issue:
+%it is unreasonable to ask for such estimations, and also opens up the
+%opportunity for users to manipulate the mechanism, which is the very behaviour
+%we wished to avoid. This is a weakness of the mechanism from Freeman et
+%al.~\cite{CODiPM}, and the issue arises as the signal posteriors are assumed to
+%be known by the system. In practice this is not possible since we have no way
+%of knowing the nature of where users get their signals. This problem could be
+%alleviated by calculating these probabilities based on past reporting and
+%market outcome histories, removing the interaction required from the user. It
+%would also be worth exploring the use of the Surrogate Scoring Rules introduced
+%by Liu et al.~\cite{Liu2020}, given that they do not need access to a ground
+%truth to score predictions. This could be particularly useful since a minor
+%issue of the mechanism we implement is that it is somewhat aged. This is not of
+%much concern, since no similar prediction market exists in a practical
+%implementation, however it would be interesting to improve on its shortcomings
+%using results and approaches from more recent works.

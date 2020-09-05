@@ -1,7 +1,7 @@
 \documentclass[10pt,a4paper]{article}
 
 % images
-\usepackage[margin=1in]{geometry}
+\usepackage[margin=1.25in]{geometry}
 \usepackage{graphicx}
 \usepackage{subfig}
 
@@ -12,6 +12,10 @@
 
 % reference items
 \usepackage{enumitem}
+
+\usepackage{lipsum}
+
+\usepackage{setspace}
 
 % links
 \usepackage{url}
@@ -59,8 +63,8 @@
 \usepackage{float}
 \usepackage{listings}
 
-\lstdefinestyle{mystyle}{
-    basicstyle=\ttfamily\small,
+\lstset{
+    basicstyle=\ttfamily\footnotesize,
     showlines=false,
     breakatwhitespace=false,         
     breaklines=false,                 
@@ -71,10 +75,10 @@
     showstringspaces=false,
 	language=Lisp,
 	float, floatplacement=H,
-	frame=single
+	frame=single,
+	breaklines,
+	tabsize=4
 }
-
-\lstset{style=mystyle}
 
 \newcommand{\code}[1]{\texttt{#1}}
 \newcommand*\conj[1]{\overline{#1}}
@@ -84,6 +88,8 @@
 % \setcounter{secnumdepth}{0}
 
 \bibliographystyle{siam}
+
+\onehalfspacing
 
 \begin{document}
 
@@ -107,7 +113,7 @@
 
 		\vspace*{1cm}
 
-		Supervised by Matthias Englert
+		Supervised by Professor Matthias Englert
 
         \vfill
 
@@ -154,6 +160,10 @@
 
 \pagebreak
 \tableofcontents
+
+\listoffigures
+\lstlistoflistings
+
 \pagebreak
 
 \input{sections/introduction}
@@ -161,8 +171,8 @@
 \input{sections/goals}
 \input{sections/design}
 \input{sections/implementation}
-%\input{sections/management}
-%\input{sections/evaluation}
+\input{sections/management}
+\input{sections/evaluation}
 
 % Evaluation points
 % - Ugly design pattern of `select-dao` then iterating with LISP (not SQL)

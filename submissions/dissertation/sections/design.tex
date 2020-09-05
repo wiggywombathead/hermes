@@ -7,9 +7,6 @@
 % - bookmaker
 % - parimutuel market
 
-% preselecting users
-% number of users to report?
-
 \label{sec:design}
 
 \subsection{Mechanism Overview}
@@ -262,59 +259,63 @@ reporting for arbiter $i$ is a best response if:
 
 \subsection{Tools}
 
-% TODO
+In order to write such a web application, we will need a platform on which to
+host the server, the ability to define webpages, and a means of interacting
+with a database for persistent storage. There are a number of useful packages
+provided by Quicklisp that allows all of this functionality to be implemented
+in Lisp. Using a single language to write the entire application -- as opposed
+to, say, a combination of HTML, PHP, MySQL, and Javascript -- encourages a
+cleaner and more flexible implementation and allows us to make full use of
+tools available to the language. A key advantage to using Lisp in particular is
+its focus on extensibility, and specifically its powerful macro system allows
+us to abstract away unnecessary details and write more generalised code. We
+discuss this in greater detail in Section~\ref{sec:implementation}.
 
-%At the minimum we require the ability to host a web server, define webpages,
-%and interact with a database management system. We have chosen to implement the
-%project almost entirely in Common Lisp, for which there is a variety of
-%libraries offering such capabilities. Using only Common Lisp, as opposed to a
-%combination of, for example, HTML, PHP, and MySQL, allows us to remain in a
-%single uniform environment and make use of Lisp's powerful macro system and
-%functional style of programming. We also use Git and Github for version
-%control.
-%
-%The market has been developed and tested with the Steel Bank Common Lisp (SBCL)
-%compiler and runtime environment. From here we can use Quicklisp, a library
-%manager that provides 
-%
-%
-%The project is implemented in Common Lisp and the code has been developed and
-%tested within the Steel Bank Common Lisp (SBCL) compiler and runtime system.
-%Code version control has been achieved with Git and Github.  Writing the web
-%application has required the use of several libraries available from the
-%library manager Quicklisp, specifically:
-%
-%\begin{itemize}
-%	\itemsep0em
-%	\item Hunchentoot
-%	\item CL-WHO
-%	\item Mito
-%	\item SXQL
-%	\item Parenscript
-%	\item Smackjack
-%\end{itemize}
-%
-%Hunchentoot provides the environment on which we host the server. Most
-%importantly it provides automatic session handling, allowing for multiple users
-%to be logged in at once, and easy access of GET and POST parameters, enabling
-%interaction via HTML forms. To generate the webpages, we use CL-WHO, which
-%converts Lisp statements into strings of valid HTML. Defining webpages while
-%remaining in the Lisp environment means we may use Lisp's macro system to build
-%abstractions for both defining structure and processing data in one interface.
-%
-%Mito and SXQL provide the ability to connect to and interact with a Relational
-%Database Management System (RDBMS). We use MySQL, though this choice is largely
-%immaterial given our simple requirements of the database.
-%
-%Parenscript incorporates Javascript into the site with the goal of improving
-%user experience. Currently it is only used to ensure that all necessary fields
-%during market creation, trading, and market resolution are non-empty to avoid
-%sending incomplete data to the server. It will be used to a greater degree in
-%the future to ensure responsiveness: all information displayed to the user must
-%be current to ensure that users are interacting with an up-to-date state of the
-%system. We therefore plan to make more use of Parenscript and Smackjack, an
-%AJAX library for Lisp, to allow for asynchronous interaction with the server.
-%This will include, for example, continuously updating a stock's price or
-%calculating the cost of a transaction without a page refresh, and stronger
-%client-side validation.
-%
+Our prediction market is written in the widely-used Common Lisp dialect of the
+Lisp family of programming languages, and in particular use the Steel Bank
+Common Lisp (SBCL) compiler and runtime environment to develop the code. Most
+importantly, Common Lisp is well-supported by Quicklisp, which provides the
+following packages that enable us to write the prediction market and web
+application:
+
+\begin{itemize}
+	\item Hunchentoot \cite{Hunchentoot}
+	\item CL-WHO \cite{CL-WHO}
+	\item Mito \cite{Mito}
+	\item SXQL \cite{SXQL}
+	\item Parenscript \cite{Parenscript}
+	\item Smackjack \cite{Smackjack}
+\end{itemize}
+
+Hunchentoot provides the environment on which we host the server. It provides
+automatic session, allowing us to implement a login system, easy access of HTTP
+GET and POST parameters submitted via HTML forms, and a simple interface
+through which to define webpage handlers. To generate the webpages themselves
+we use CL-WHO, which translates Lisp expressions into HTML strings that we then
+pass to the appropriate Hunchentoot functions. The structure of a Lisp program
+maps well to that expected by an HTML file, while allowing us to dynamically
+generate pages through the use of macros, making Lisp a suitable choice for
+such a purpose.
+
+Mito provides an interface with which we can connect to and interact with a
+Relational Database Management System while remaining within the Lisp
+environment. We opt for a MySQL backend, simply due to its familiarity, though
+this choice is largely immaterial given our simple requirements. We can compose
+more complex MySQL statement using SXQL, and this integrates well with Mito so
+that the two are effectively used as one library.
+
+Parenscript allows us to incorporate Javascript into the site with the
+intention of improving user experience. Currently it is used as a means of
+performing client-side validation of form data, to ensure information arrives
+at the server in the correct format and that all the necessary data is there.
+It also enables us to use the Smackjack library, allowing us to have
+asynchronous communication between the client and server. Particularly
+important in any real-time market, this ensures all prices displayed to the
+user are current and the user is interacting with an up-to-date state of the
+system.
+
+We use the Ngrok~\cite{ngrok} utility throughout the project's development to
+tunnel ports on our local machine to public URLs, to ensure our market not only
+functions locally but continues to do so on different machines and with
+multiple users at once. Finally, Git and Github have been used extensively for
+version control and remote storage and backup.

@@ -6,100 +6,143 @@
 
 The project has been developed incrementally, with a focus on integrating new
 functionality completely before progressing to new features. This approach is
-well-suited to this project's design: since it comprises of mainly four
-separate areas which are drawn together at the end, it is possible to focus on
-implementing a feature within one area without it affecting the rest. As a
-result, testing has been performed throughout and ensures that a newer version
-of the project is never worse than its predecessor. Using Git and Github has
-been helpful in this regard, providing cloud storage and the ability to roll
-back to previous versions if the current one is broken by a new feature.
+well-suited to this project's design: since it comprises of five separate areas
+which are drawn together at the end, it is possible to focus on implementing a
+feature within one area without it affecting the rest. As a result, testing has
+been performed throughout and ensures that a newer version of the project is
+never worse than its predecessor. Using Git and Github has been helpful in this
+regard, providing cloud storage and the ability to roll back to previous
+versions of the project if the current one is broken by a new feature.
+
+Meetings have been taken with this project's supervisor, Professor Matthias
+Englert to track progress. These were more regular towards the beginning of the
+project, though as it began to take more shape the consistency of these
+meetings declined. As we will discuss in the following section, this is due in
+part to the exam period, during which most focus was diverted towards revision,
+however the original frequency was never picked up after this time as was
+initially planned. Moreover, it bears mentioning that the current situation
+within which we find ourselves regarding the coronavirus pandemic may also have
+affected the frequency of these meetings. Regardless, the author feels more
+initiative should have been taken on his end to ensure their consistency. We
+shall next describe our approach towards the scheduling of this project.
+
+\subsection{Scheduling}
+
+There have been few major issues with regards to the scheduling of this
+project, although it undergone a slight change from the timetable in its
+original conception. Figure~\ref{fig:old-timetable} shows the schedule as it
+was planned at the time of our presentation on the project, which was when it
+was still in its early stages of development. In Figure~\ref{fig:new-timetable}
+we detail the order in which tasks were actually carried out.
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=\textwidth]{old-timetable}
+	\caption{The project's timetable as it was initially planned}
+	\label{fig:old-timetable}
+\end{figure}
+
+An initial prototype of the prediction market had been written in time for the
+presentation and at its core our current iteration is very similar to this
+early version with respect to the datatypes we define and the processes of
+trading and arbitration. However, it was entirely text-based and had no
+capacity for persistent storage, meaning it was unusable in a practical
+setting. At any rate its purpose was to showcase the mechanism in action and
+this is, at its core, very simple. 
+
+Work after this point was focused on translating this terminal-based
+implementation to operate on a barebones web server, with the first steps to
+achieve persistent storage via interaction with a database. Since Mito's
+\code{deftable} macro is functionally very similar to that of Common Lisp's
+\code{defstruct}, after reading documentation on setting the system up
+correctly and connecting to it, this conversion was relatively straightforward.
+Similarly, the code to set up and begin defining webpages in our implementation
+is simple and hence took little time to set up. In the case of both the web
+server and the database, a significantly larger portion of time was spent
+deciding how to integrate features as they were developed into the system as a
+whole: there is the implicit assumption that each feature added incorporated
+not only the logic to get it working but also designing new webpages and adding
+to the database interface. Some issues were encountered trying to implement
+asynchronous communication with the server via Parenscript and Smackjack, and
+much time was spent getting this working. This highlights one of the drawbacks
+behind using both libraries: while they are well-documented in that their
+reference manuals detail each function they provide, it seems they are not
+widely used and hence have few practical examples online from which to learn.
+
+Worthy of note is the two-week delay from the original deadline for the interim
+report, arising from the university-wide implementation of a two-week extension
+to all assessed work. We took the decision to take advantage of this decision
+by spending an extra two weeks to implement the arbitration stage to a greater
+degree of completion. This did not affect the overall
+
+\textbf{TODO}
+
+%Firstly, although an early demonstration of the market and arbitration stages
+%was complete for the presentation, this did not yet use any persistent storage
+%or actual users. Therefore, to get these stages working as they would in the
+%final project, the website and database interface first needed implementing.
+%This has taken the majority of the time since the presentation, and includes
+%defining the various pages and forms with which the users interact with the
+%markets, as well as how we interact with the database to register, log in, and
+%pay users. As we will cover in the next section, there are only three main
+%areas of functionality left to target: asynchronous communication with the
+%server via AJAX calls, automation of the system regarding closing markets once
+%enough arbiters have submitted reports, and most importantly parameter tuning.
+%The latter has been given a large block of time to complete since there are
+%many values on which certain parameters depend, and it is imagined that
+%calculating these accurately will require care.
+
+%Secondly, the time dedicated to writing the interim report has been extended by
+%two weeks to reflect the extension to its deadline. Although it was not
+%initially required, the extra time that could be diverted towards developing
+%the systems while the writing of the report was delayed was useful in providing
+%more material to discuss. This was also caused in part by more focus than
+%anticipated being paid towards exam preparation.
+
+%\subsection{Next Steps}
+
+%% Parameter tuning which requires processing of all data submitted 
+%% Asynchronous database queries to keep page details accurate
+
+%The next task is to tune the parameters of the system to ensure truthful
+%reporting, since this is the entire reason for implementing the mechanism. This
+%includes setting transaction fee $f$ to the appropriate percentage and the
+%payment parameter $k$. It will also be important to fully automate the system,
+%meaning the server automatically decides when to close markets: this is
+%currently done by prompting the system to compute market outcomes, which is
+%insufficient. The final important feature to add is asynchronous server
+%communication -- although it does not necessarily add new functionality to the
+%core of the prediction market, it would dramatically increase usability. 
+
+%We plan to dedicate a significant portion of August to the writing of the
+%dissertation, to spread the workload more evenly and to allow features that are
+%developed later more time to be added into the report.  We hope to get feedback
+%on a draft of the dissertation three weeks before the final deadline so that
+%the following weeks can be spent refining the material, and for more versions
+%to be produced in the remaining time. This means we intend to get all required
+%goals working well before the end of the month, to ensure we are not making
+%considerable changes shortly before the deadline.
+
+%\begin{figure}[h]
+%	\centering
+%	\includegraphics[width=\textwidth]{new-schedule}
+%	\caption{Revised project timetable}
+%	\label{fig:new-schedule}
+%\end{figure}
 
 \subsection{Ethics}
 
 There is little ethical consideration required for the development of this
 project. All development and testing has been done independently, and all
-resources used to implement the system is available freely. Testing has been
+resources used to implement the system are available freely. Testing has been
 performed externally only to small extent, and even then only informally
-through asking of colleagues' opinions. There is one ethical issue that faces
-prediction markets in general, however, and the one we implement is no
-exception. When prediction markets operate, directly or indirectly, with real
-money, they run the risk of devolving into ``assassination
-markets''~\cite{assassinationMarkets, crowdfundingMurder}. This refers to the
-incentive that people may have to act in a way that changes the ``natural''
-outcome of an event. In the extreme case, a bet may be made on the death of a
-high-profile individual and an assassin could stand to make a large by
-participating in the market and ensuring that the individual dies on a given
-date. A way to sidestep this issue is to use virtual money with no real-world
-value, and this is the approach we take.
-
-\subsection{Scheduling}
-
-There have been few issues regarding the scheduling of the project, though it
-has benefited from a slight rearrangement of the initial timetable.
-Figure~\ref{fig:old-schedule} shows the schedule as it was planned at the time
-of the presentation, towards the start of the project's initial development.
-Tasks have also taken slightly longer to implement, and a revised version is
-given in Figure~\ref{fig:new-schedule}, which details both how time on the
-project was spent and how we now plan to use the remaining time.
-
-\begin{figure}[h]
-	\centering
-	\includegraphics[width=\textwidth]{old-schedule}
-	\caption{Project timetable as it was initially planned}
-	\label{fig:old-schedule}
-\end{figure}
-
-Firstly, although an early demonstration of the market and arbitration stages
-was complete for the presentation, this did not yet use any persistent storage
-or actual users. Therefore, to get these stages working as they would in the
-final project, the website and database interface first needed implementing.
-This has taken the majority of the time since the presentation, and includes
-defining the various pages and forms with which the users interact with the
-markets, as well as how we interact with the database to register, log in, and
-pay users. As we will cover in the next section, there are only three main
-areas of functionality left to target: asynchronous communication with the
-server via AJAX calls, automation of the system regarding closing markets once
-enough arbiters have submitted reports, and most importantly parameter tuning.
-The latter has been given a large block of time to complete since there are
-many values on which certain parameters depend, and it is imagined that
-calculating these accurately will require care.
-
-Secondly, the time dedicated to writing the interim report has been extended by
-two weeks to reflect the extension to its deadline. Although it was not
-initially required, the extra time that could be diverted towards developing
-the systems while the writing of the report was delayed was useful in providing
-more material to discuss. This was also caused in part by more focus than
-anticipated being paid towards exam preparation.
-
-\subsection{Next Steps}
-
-% Parameter tuning which requires processing of all data submitted 
-% Asynchronous database queries to keep page details accurate
-
-The next task is to tune the parameters of the system to ensure truthful
-reporting, since this is the entire reason for implementing the mechanism. This
-includes setting transaction fee $f$ to the appropriate percentage and the
-payment parameter $k$. It will also be important to fully automate the system,
-meaning the server automatically decides when to close markets: this is
-currently done by prompting the system to compute market outcomes, which is
-insufficient. The final important feature to add is asynchronous server
-communication -- although it does not necessarily add new functionality to the
-core of the prediction market, it would dramatically increase usability. 
-
-We plan to dedicate a significant portion of August to the writing of the
-dissertation, to spread the workload more evenly and to allow features that are
-developed later more time to be added into the report.  We hope to get feedback
-on a draft of the dissertation three weeks before the final deadline so that
-the following weeks can be spent refining the material, and for more versions
-to be produced in the remaining time. This means we intend to get all required
-goals working well before the end of the month, to ensure we are not making
-considerable changes shortly before the deadline.
-
-\begin{figure}[h]
-	\centering
-	\includegraphics[width=\textwidth]{new-schedule}
-	\caption{Revised project timetable}
-	\label{fig:new-schedule}
-\end{figure}
-
+through gathering opinions amongst colleagues. As we have discussed has been a
+problem for existing prediction markets, there is one ethical issue that arises
+from using real money in prediction markets and this is their potential to
+inspire ``assassination markets'', where there is a real-life incentive to
+change the outcome of the market through committing actions of dubious
+character, such as assassinating the subject of a security speculating on the
+time of their death. We avoid testing the strength of our users' moral fibre by
+using fake money only, with no real-world value, meaning there is no incentive
+to act in such a way as to compromise one's integrity.
 

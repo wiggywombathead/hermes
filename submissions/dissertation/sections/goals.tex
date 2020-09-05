@@ -10,15 +10,16 @@ outcomes will be decided by peer prediction, in which events are settled by a
 subset of the users known as arbiters. A user may even act as an arbiter in a
 market in which they themselves may hold a stake. Specifically, we seek to:
 
-\begin{itemize}
+\begin{enumerate}
+		\label{enm:goals}
 	\item create a web application on which users can create custom bets and
-		trade on these markets
+		trade on these markets 
 	\item implement a trading mechanism that allows users to buy and sell
 		shares in the user-made securities using play money
 	\item crowdsource outcome determination using reports from arbiters who may
 		hold positions in the market
 	\item incentivise truthful behaviour at all stages in the mechanism
-\end{itemize}
+\end{enumerate}
 
 These goals will largely be achieved by implementing the mechanism outlined by
 Freeman et al.~\cite{Freeman2017}, albeit wit several practical modifications.
@@ -65,7 +66,7 @@ their part since they are not only estimating their belief on the probability
 that the event will have a positive outcome, but also on how the other users
 will act, similar to a real stock market.
 
-Finally, an issue with the mechanism of Freeman et al. as it stands is that it
+Finally, an issue with the mechanism of Freeman et al.\ as it stands is that it
 does not directly punish users for creating markets on ambiguous bets. Traders
 may become confused about the wording, leading to different interpretations and
 hence different users trading on different beliefs -- this is not useful for
