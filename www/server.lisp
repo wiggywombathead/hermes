@@ -773,7 +773,7 @@
 			 (:input :name "bet-id" :value id))
 
 	  ;; if required number of arbiters have reported, then close the market
-	  ;; TODO: this works but is a bit slow, find a better
+	  ;; TODO: this works but is a bit slow, find a better way
 	  (if (= (db:get-num-reports security) +minimum-reports+)
 		(htm
 		  (:script (str

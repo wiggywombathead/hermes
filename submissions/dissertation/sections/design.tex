@@ -63,72 +63,25 @@ theoretical standpoint.
 
 \subsection{Market Stage}
 
+\label{sec:marketStage}
+
+\subsubsection{Trading Mechanism}
+
 The market stage allows users to create markets for any bet they desire and
 specifies the how the share price reacts according to user participation. As we
 implement a decentralised market, we place no restriction on the bet that can
-be placed (only that it is binary, i.e. it is ultimately either a ``yes'' or a
-``no''). In any market, there are two sides to any trade: one side offers some
+be placed other than that it must be binary, resulting in either a ``yes'' or a
+``no''. In any market, there are two sides to any trade: one side offers some
 number shares, while there is some party that must be willing to purchase this
-number of shares at this price. There are a number of options for implementing
-such a trading mechanism, as we will detail in the following section.
-
-\subsubsection{Market Scoring Rules}
-
-\label{sec:marketScoringRules}
-
-There are a  number of options for implementing a market trading mechanism:
-these include as a continuous double auction, market call auction, or by using
-an automated market maker. A continuous double auction (CDA) is a method by
-which buyers are matched with sellers of a stock. The market maker keeps an
-order book that tracks the bids, submitted by those looking to buy a stock, and
-the asks, submitted by those looking to sell a stock. Traders arrive
-asynchronously and place orders, and when two opposite orders match the trade
-is executed. Continuous double auctions are traditionally used in highly
-liquid markets, where there are many bids for a given ask (and vice versa),
-such as the New York Stock Exchange. An issue with this approach, however, is
-that it relies on high liquidity -- that is, it requires that there is always a
-willing buyer and seller for a particular price at a particular quantity of
-shares. Especially in a prediction market, most prediction markets have far
-fewer participants than a stock exchange: if Alice is willing to sell a share
-of stock $A$ for \$6 but no one is willing to buy at that price, then a trade
-cannot be executed. This problem can be particularly severe in a combinatorial
-market, where a trader's attention is split between exponentially many
-securities. Traders may also be hesitant to participate in a market organised
-as a continuous double auction, since their participation at a particular price
-encourages others to participate at a lower price thus depriving them of
-profit. Prices may therefore not be informative, and instead only reflect the
-game traders are playing with one another.
-
-To avoid these problems of illiquidity, one can use an automated market maker,
-in which a price maker is (nearly) always willing to accept both buy and sell
-orders at a certain price. It is possible that this price changes with the
-user's interaction with the market. This ensures that participants are always
-able to make a trade, thus ``making'' the market. Typically this is not used in
-real-money markets since always assuming the opposite side to any given trade
-would likely result in losses for the house; in play-money markets this is not
-such an issue as losses are less detrimental, but prices must still be adjusted
-to ensure losses are bounded. Two options arise for implementing an automated
-market maker: Market Scoring Rules (MSR) and parimutuel markets. We are
-interested in the former.
-
-Suppose our market contains $|\Omega|$ mutually exclusive and exhaustive
-securities. Let $q_j$ be the total quantity of shares held by all traders of
-security $j$, and let $\vect{q} = (q_1, \ldots, q_{|\Omega|})$. At the heart of
-a Market Scoring Rule is the cost function $C(\vect{q})$, which is a means of
-recording the total amount of money spent by traders as a function of the total
-number of shares in circulation. An agent wishing to purchase $q_j' - q_j$
-shares of security $j$, increasing the number of shares of security $j$ to
-$q_j'$, would then pay $C(\vect{q}_{-j}, q_j') - C(\vect{q})$.\footnote{We use
-$\vect{q}_{-j}$ to denote the vector $(q_1, \ldots, q_{j-1}, q_{j+1}, \ldots,
-q_{|\Omega|})$.} This model also accommodates selling shares, in which case
-$q_j' < q_j$. We cannot use $C$ to quote a share price to the user, since we
-first need to know the quantity of shares they wish to buy or sell: instead, we
-use its derivative $p = \partial C / \partial q_j$, which gives the cost for
-purchasing an infinitesimal quantity of shares. Just as we cannot use $C$ to
-quote individual share price, we cannot use $p$ to calculate the cost of
-transaction, since a user's interaction with the market will automatically have
-an effect on share price as, in practice, they are not purchasing an
-infinitesimal quantity.
+number of shares at this price. As we have covered in
+Section~\ref{sec:tradingMechanisms}, there are a number of options available
+for implementing the market trading mechanism. We implement a scoring rule
+market, in which users must pay $C(\vect{q}_{-j}, q_j')-C(\vect{q})$ to change
+the total number of outstanding shares of security $j$ from $q_j$ to $q_j'$.
+Since market prices are dynamic we quote instantaneous share price to users
+with its derivative $p_j$ -- this is also used to calculate the trading fee on
+a given transaction, which raises funds to pay arbiters in the following stage
+of the mechanism.
 
 \subsubsection{Trading fees}
 

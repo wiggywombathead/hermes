@@ -33,10 +33,7 @@
 	  " set the market closing function to execute when next market expires "
 	  (chain smackjack
 			 (ajax-set-timer #'(lambda (response)
-								 ;(alert (+ "setting timer to " (@ response seconds)))
 								 (set-timeout (lambda ()
-												;(alert (+ "\"" (@ response security) "\" has expired"))
-												; TODO: call close-market
 												(chain location (reload)))
 											  (* (@ response seconds) 1000))))))
 

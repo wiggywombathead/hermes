@@ -2,7 +2,7 @@
 
 \label{sec:background}
 
-\subsection{Setup}
+\subsection{The Information Aggregation Problem}
 
 Consider the following problem within algorithmic mechanism design known as the
 \emph{information aggregation problem}~\cite[Ch.~26]{AGTBook}. An individual
@@ -63,7 +63,12 @@ reveal their private information such that in equilibrium we achieve a forecast
 as close as possible to the omniscient one. Prediction markets offer the agents
 the chance of financial gain for revealing information regarding the expected
 value of $f(\omega)$, and the share price of the security can be interpreted as
-the collective forecast of the agents. In Section~\ref{sec:design} we shall
+the collective forecast of the agents. In the following section we shall
+outline some of the different approaches one can take to designing the market
+mechanism itself: the best choice will vary for the setting and will depend on
+what is tractable given the types of bets that are on offer.
+
+In Section~\ref{sec:design} we shall
 outline the different approaches one can take to designing the prediction
 market mechanism itself and the one among them, a Market Scoring Rule, that we
 implement. Importantly, Market Scoring Rules are one of the ways to increase
@@ -72,172 +77,214 @@ trade, meaning users may participate even when no other user wishes to buy or
 sell for what they are asking or bidding. This means a trade is always able to
 be executed, although without care the system could make consistent losses.
 
-\subsection{Literature Review}
+\subsection{Combinatorial Prediction Markets}
 
-% Iowa Electronic Markets
-% PredictIt, PredictAlot
-% Intrade
-% Rational expectations - demand not same as traditional market
-% PredictIt disputes: wording
+A \emph{combinatorial} prediction market is one in which the total state space
+$\Omega$ is the product space of a collection of base events. Suppose knowing
+the outcome of a given event cannot be predicted with certainty even if the
+outcomes to all other base events are known, and we wish to provide the
+opportunity to trade on any outcome $\omega \in \Omega$: with a set of base
+events of size $\mathcal{|E|}$ we would have a total outcome space of size
+$2^\mathcal{|E|}$.  With such a large outcome space it may therefore be
+impossible to even all the securities available in such a market. Combinatorial
+markets can make use of ``expressive'' bidding languages that represent
+collections of securities succinctly, including \emph{compound orders} and
+\emph{combined orders}.
 
-The Iowa Electronic Markets (IEM) are real-money prediction markets developed
-by the University of Iowa~\cite{IEM} that have been running since 1988. They
-allow users to buy and sell contracts based on the outcome of U.S. political
-elections and economic indicators, and are currently offering markets for the
-winning party of the 2020 U.S. presidential election, the vote share between
-the Democratic and Republican parties in the 2020 U.S. presidential election,
-and the compositions of the houses of Congress, House of Representatives, and
-U.S. Senate after the outcome of the 2020 U.S. congressional elections. The
-number of markets offered is small and the topics are kept relevant to current
-events, meaning there is likely to be high liquidity for any security a user
-wishes to trade in. This has allowed the markets to predict the results of
-political elections with more accuracy and less error than traditional polls:
-for the presidential elections between 1988 and 2000, three-quarters of the
-time the IEM's market price on the day each poll was released was more accurate
-for predicting vote share than the poll itself~\cite[pg.~19]{WisdomOfCrowds}.
-These markets inspired similar markets in the forms of the Hollywood Stock
-Exchange, NewsFutures, and the Foresight Exchange report, which achieved
-similar successes despite not using real money. 
+Combined orders allow a user to trade a collection of securities by specifying
+the securities they wish to buy or sell together as a bundle along with limit
+prices for each constituent security. If there is even a single security in the
+bundle that is not at least as ``good''\footnote{If we are buying we want a
+price less than or equal to the limit price, while the opposite is true if we
+are selling.} as its limit price, then no trade is made. Consider an agent's
+alternative if they wish to trade on all these securities in a
+non-combinatorial market: this means they would need to trade on each one
+individually. Throughout the execution of such a sequence of trades, however,
+market prices are subject to change, and in the worst case these could reduce
+or even reverse the utility of participating in such trades. Combined orders
+therefore protect its participants from such risk. Calculating assignments of
+securities to buyers in such a setting is reminiscent of the challenge faced
+in a combinatorial \emph{auction}, which known to be NP-hard.
 
-An issue with these markets is that they are restrictive in the bets they
-offer. Although this can be beneficial in that they provide a focused and
-liquid market in which to trade, it leaves them potentially less interesting to
-interact with. A combinatorial prediction market is a solution to this and
-drastically increases the number of events that can be bet on and outcomes
-predicted by offering securities on interrelated propositions that can be
-combined in various ways. One example of such a market is that of
-\emph{Predictalot}~\cite{Predictalot}, a combinatorial prediction market
-developed by Yahoo! that allowed users to trade securities in the 2010 NCAA
-Men's Division I Basketball Tournament. The tournament sees the top 64 teams
-play 63 games in a knockout competition, yielding a total outcome space of size
-$2^{63}$. \emph{Predictalot} then kept track of the odds, computing them by
-scanning through all of the predictions made by users. This prediction market
-was the original inspiration for this project in investigating prediction
-markets. Using a Market Scoring Rule for such a market would involve computing
-a summation over the entire outcome space $\Omega$, an intractable, \#P-hard
-problem akin to counting the number of variable assignments that satisfy a CNF
-formula, or or the number of subsets in a list of integers that sum to zero.
-Instead, they employ an implementation of importance sampling, a technique for
-estimating properties of a particular probability distribution using only
-samples generated from a different distribution. This ``naive'' approach is
-then improved upon by the work of Dud\'ik, Lahaie, and
-Pennock~\cite{Dudik2012}, who use convex optimisation and constraint generation
-to develop a market maker which is tractable. This approach lies somewhere
-between treating all securities as independent and a fully combinatorial,
-``ideal'' market maker, propagating information among related securities for
-more complete information aggregation. The ways in which their odds are
-calculated are also natural: for example, a large bet on a team to win the
-entire tournament automatically increases the odds that the same team will
-progress past the first round, since they would not be able to win the
-competition without doing so. This work is then improved upon by Kroer,
-Dud\'ik, Lahaie, and Balakrishnan~\cite{Kroer2016}, in which they use integer
-programming to achieve arbitrage-free trades, or always profitable risk-free
-trades. On top of achieving bounded loss, a crucial element behind a market
-mechanism operating in the real world and avoiding bankruptcy, avoiding
-arbitrage is desirable as it leads to more accurate forecasts: since users
-cannot make risk-free profits, they are forced to bet according to their true
-beliefs.
+Compound orders are generalisations of combined orders and allow users to trade
+on any Boolean expression involving the set of base events. Now again the size
+of the outcome space is $2^\mathcal{|E|}$, but now users may select any
+collection of these worlds to bet on, giving a total of $2^{2^\mathcal{|E|}}$
+options. Agents now place orders by requesting $q$ shares of the security
+$S_{\phi|\psi}$ at share price $p$, where $S_{\phi|\psi}$ pays out \$1 if both
+Boolean formulae $\phi$ and $\psi$ are true, \$0 if only $\psi$ is true, and
+refunds the user if $\psi$ is false. These orders will yield a payoff
+$\gamma^{\langle \omega \rangle}$ depending on the state $\omega \in \Omega$,
+and can be written as:
+$$
+\gamma^{\langle \omega \rangle} = q \cdot \mathds{1}_{\omega \in \psi}
+(\mathds{1}_{\omega \in \phi} - p)
+$$
 
-All examples so far have involved a centralised market mechanism. These types
-of systems involve a central authority providing the bets upon which users may
-bet and then verifying their outcome. \emph{Decentralised} markets allow the
-users themselves to define their own bets and trade shares in them. These types
-of systems involve a central authority providing the bets upon which users may
-bet and then verifying their outcome. These types of markets allow the users
-themselves to define their own markets by providing custom bets and them
-trading shares in them. Several examples of decentralised markets exist and
-they are often implemented with cryptocurrencies. Peterson et
-al.~\cite{Peterson2015} study the setting and use it to implement the oracle at
-the heart of \emph{Augur}~\cite{Augur}, a decentralised prediction market built
-upon the Ethereum blockchain that launched in 2018. It allows users to offer
-predictions on any topic, and markets may be either categorical, which are
-similar to binary markets in which the winner takes all, or scalar, which offer
-users a spectrum of outcomes in which to invest. For example, users may bet
-that the global average temperature for 2020 will lie in a certain range.  As
-in many decentralised markets, outcomes of events are then resolved by the
-users, and in the case of \emph{Augur} users are incentivised to report
-truthfully by way of paying reporting fees. This amounts to users depositing
-tokens to back their report, and token holders are then entitled to the trading
-fees generated. Although this persuades against manipulation, it has not been
-shown whether this system achieves any theoretical guarantees of truthful
-reporting.
+This says that the order will receive a payoff of zero if the true world state
+$\omega$ does not appear in $\psi$, meaning the order is invalid and refunded
+to the user. Otherwise, the user will receive a payout of $(1-p)$ for each
+share they bought if $\omega \in \phi$, meaning the event occurred, otherwise
+they will only lose what they paid and receiving total payoff of $-p$ for each
+share. Each user $i$ has a payoff vector $\gamma_i$ induced by submitting
+orders. It is the job of the auctioneer to determine which orders to accept:
+let $\alpha_i \in \{0,1\}$ indicate whether the auctioneer accepts an order
+from user $i$. Since they will collect the money paid by the trader and payout
+their winnings according to each user's payoff vector, the auctioneer receives
+payoff:
+$$
+\gamma_a = \sum_i -\alpha_i \gamma_i
+$$
 
-As can often be the case with real-money markets, the platform had quickly
-devolved into an assassination market~\cite{AugurDeathMarket} -- originally
-this referred to the case where users created markets on the deaths of certain
-people, which then incentivised their assassination. A user could stand to
-profit by placing a bet on the exact time of their death, and ensure this bet
-was profitable by assassinating the subject. More generally this refers to the
-users of a prediction market having the ability to influence a market's outcome
-and acting on this opportunity. Another issue with \emph{Augur} is the option
-to report a market's outcome as ``invalid'': this is for the case where the
-user-made bet is too ambiguous to decided, such as, ``Bayern Munich will play
-well against Paris Saint Germain''.
+The \emph{indivisible matching problem} is the problem that, given a set of
+orders, does there exist a set of $\alpha_i \in \{0,1\}$ and $\sum_i \alpha_i
+\ge 1$ such that for any outcome $\omega$ the auctioneer receives payoff
+$\gamma_a^{\langle \omega \rangle} \ge 0$? In other words, the auctioneer is
+looking to accept some bundle of orders \emph{without risk}.
 
-Other decentralised markets based on cryptocurrencies exist, including
-\emph{Omen}~\cite{Omen} and \emph{Hivemind}~\cite{Hivemind}. The former is
-similar to \emph{Augur} in that it allows users to create markets for any bet
-they like and whose outcomes are not decided by the system itself. Whereas
-\emph{Augur} uses a reputation system in the form of requiring users to back
-their report of a market's outcome with \$REP tokens, \emph{Omen} asks the
-market creator to supply an ``oracle'' through which the outcome can be
-determined. They note that this oracle can even be \emph{Augur}. Although this
-may solve the ``invalid'' outcome option for ambiguous bets, it may introduce
-bias into the process of outcome determination. For example, suppose a user
-creates a market for ``The Democratic nominee will tell a lie during tonight's
-debate'' and lists the oracle as the conservative news channel, Fox News. Users
-would then trade on how they think the oracle will report the outcome, and not
-what they believe the outcome will be themselves. An important aspect of
-decentralised markets must therefore be that the outcome is determined by the
-community, not a single source. 
+\subsubsection*{Example}
 
-In contrast to \emph{Augur}, which implements a traditional orderbook using
-Ethereum, \emph{Omen} uses an automated market maker to provide liquidity to
-its securities. Two approaches to this include using a Market Scoring Rule to
-update the odds on a given event, and implementing a parimutuel market where
-users compete for a share of the total money wagered while the share price
-varies dynamically according to some cost function. Hanson~\cite{Hanson2003}
-shows that we can use any strictly proper scoring rule to implement an
-automated market maker: with such scoring rules, agents maximise their expected
-utility by truthfully revealing their predictions. In particular, in this
-project we implement the peer prediction market introduced by Freeman, Lahaie,
-and Pennock~\cite{Freeman2017}, which specifies a market that uses a Market
-Scoring Rule to trade bets and crowdsources outcome determination, similarly to
-\emph{Augur}, by asking users for reports. All they require is that the rule is
-strictly proper, giving plenty of choice to study the effects different rules
-have on user behaviour. While the choice of scoring rule is less important than
-the mechanism by which market outcomes are determined, a recent work by Liu,
-Wang, and Chen~\cite{Liu2020} introduces scoring rules for the setting where
-the aggregator has access only to user reports, which they call Surrogate
-Scoring Rules (SSRs). This appears to be an interesting avenue to further
-explore and adapt to a prediction market. One assumption they make, however,
-seems incompatible with the decentralised setting in that they require all
-events to be independent.  Given that users can create a market for \emph{any}
-bet, this condition is impossible to ensure. Since SSRs can be strictly proper
-under certain conditions, they may be applicable as the Market Scoring Rule in
-\cite{Freeman2017}. 
+Suppose $\mathcal{E} = \{X_1, X_2\}$ and there are two orders: 1 wishes to buy
+two shares of security $S_{X_1}$ at 0.6 per share while 2 wishes to sell one
+shares of security $S_{X_1,X_2}$ for 0.2 per share. Assuming the auctioneer
+accepts both orders, the payoffs are as follows (note player 2's payoff vector
+is negated since they are selling):
+%
+\begin{equation*}
+	\begin{aligned}
+		\gamma_1 & = \left\langle \begin{matrix}
+			\gamma_1^{X_1,X_2} &
+			\gamma_1^{X_1,\bar{X_2}} &
+			\gamma_1^{\bar{X_1},X_2} &
+		\gamma_1^{\bar{X_1},\bar{X_2}} \end{matrix} \right\rangle 
+%
+		 = \left\langle \begin{matrix}
+			2(1-0.6) & 2(1-0.6) & 2(-0.6) & 2(-0.6) \end{matrix} \right\rangle \\
+%
+		\gamma_2 & = - \left\langle \begin{matrix}
+			1(1-0.2) & 1(-0.2) & 1(-0.2) & 1(-0.2) \end{matrix} \right\rangle \\
+%
+		\gamma_a & = \left\langle \begin{matrix}
+			0 & -1 & 1 & 1 \end{matrix} \right\rangle
+	\end{aligned}
+\end{equation*}
 
-Other prediction markets existed in \emph{PredictIt}~\cite{PredictIt} and
-\emph{InTrade}~\cite{InTrade}, both offering markets for various political and
-economic events. However, both experienced disputes largely related to the
-wording of the available to trade and the ambiguity in their resolution. For
-example, a bet offered on \emph{PredictIt} was, ``Who will be Senate-confirmed
-Secretary of State on March 31, 2018?'', and although Rex Tillerson was fired
-in the middle of March, he was officially the secretary of state until midnight
-of the 31st, leading to confusion among users in what they are trading on and
-therefore inaccuracies in the predictions it elicited. This will be a problem
-inherent to any prediction market that allows users to specify their own bets,
-and while the work of Freeman et al.~\cite{Freeman2017} evades the problem of
-determining the outcome by setting it to the proportion of users reporting a
-``yes'' outcome, this does nothing to penalise the initial creator for
-introducing an ambiguous market.
+Accepting both orders is therefore not a valid solution to the indivisible
+matching problem since in the event that $\omega = \{X_1,\bar{X_2}\}$ the
+auctioneer would have to run a loss. In fact, finding a solution to the
+indivisible matching problem is NP-complete~\cite[Ch.~26]{AGTBook}. Although we
+do not focus on combinatorial prediction markets in this project, it is useful
+to illustrate the challenges of designing efficient market mechanisms. In
+particular, we are concerned with illiquidity, which arises when there is too
+little interaction for a trade to be executed.
 
-\begin{figure}[h]
-	\centering
-	\includegraphics[width=\textwidth]{predictit}
-	\caption{The \emph{PredictIt} prediction market for the 2020 U.S.
-	presidential election. As of \today\ Joe Biden is perceived to be more
-	likely to become President.}
-	\label{fig:predictit}
-\end{figure}
+\subsection{Trading Mechanisms}
 
+\label{sec:tradingMechanisms}
+
+\subsubsection{Continuous Double Auctions}
+
+Trading mechanisms are responsible for deciding which trades are executed, in
+what quantities, and at which price points. In the previous section, although
+users had to submit orders of a particular form, the auctioneer was free to
+accept any subset of the orders received: this section expounds upon \emph{how}
+trades may be chosen. There are numerous methods of implementing market trading
+mechanisms, including double auctions, market call auctions, and automated
+market makers. A Continuous Double Auction (CDA) is a method by which buyers
+are matched with sellers of a stock or security. The market maker keeps an
+order book that tracks the bids, submitted by those looking to buy, and the
+asks, submitted by those looking to sell. Traders arrive asynchronously and
+place orders, and when two opposite orders match the trade is executed. CDAs
+are traditionally used in highly liquid markets, such as the New York Stock
+Exchange, where there are many bids for a given ask and vice versa. An issue
+with this approach is that it relies on high liquidity, as it requires that
+there is always a willing buyer and seller at a particular price and quantity
+in order to a trade to execute. In prediction markets there are far fewer
+participants than in a stock exchange, and this problem is made worse in
+combinatorial markets, in which case a trader's attention is split among an
+exponential number of securities making the likelihood that a buyer and seller
+are looking to trade on the same event exceptionally small. Prices may also not
+be informative of the true beliefs held by traders in CDAs: since all traders
+can see bids and asks as they are submitted sellers may be encouraged to ask
+less than what they truly believe a security's ``true'' value to be in order to
+beat out another seller and make a profit. This is not useful in a prediction
+market setting, where we want to elicit the true beliefs from users.
+
+These problems arising from market illiquidity can be averted by using an
+automated market maker, in which a price maker is nearly always willing to
+accept both buy and sell orders at a certain price. Participation in the market
+will have an effect on these prices, the exact nature of which will be down to
+the market maker. This ensures that, if the price is desirable, participants
+are always able to make a trade. An automated market maker is not typically
+used in real-world markets since always assuming the opposite side to any trade
+would likely result in significant losses for ``the house''; in play-money
+markets this is not such an issue as losses are less detrimental with no
+real-world negative value. In general there are three properties that an
+automated market maker should satisfy in order to be of practical use: traders
+should have an incentive to participate in the market whenever their beliefs
+would change the price; the computation of market prices should be tractable;
+and the market's loss should be bounded. We have two options for implementing
+automated market makers: as a parimutuel market or using a Market Scoring Rule.
+
+\subsubsection{Parimutuel Markets}
+
+In parimutuel markets traders wager money their choice of outcomes from a
+mutually exclusive and exhaustive set. When the event's outcome is realised the
+total wagered money is split between those who wagered correctly, in proportion
+to the size of their bet. In order to accommodate traders selling shares prior
+to the outcome of the event, \emph{dynamic} parimutuel markets incorporate a
+cost function that varies the price of a single share due to trading activity.
+An example of one such cost function is the share-ratio cost function. Suppose
+we have an outcome space $\Omega$ and let $q_j$ denote the total number of
+shares for event $j \in \Omega$. Let $\vect{q} = (q_1, \ldots, q_{|\Omega|})$
+be the vector of outstanding shares of all contracts. The share-ratio cost
+function is:
+%
+$$ C(\vect{q}) = \sqrt{\sum_j q_j^2} $$
+
+A trader wishing to buy $q_j' - q_j$ shares of security $j$, who changes the
+number of outstanding shares of $j$ from $q_j$ to $q_j'$, pays the market
+$C(\vect{q}_{-j}, q_j') - C(\vect{q})$.\footnote{We use $\vect{q}_{-j}$ to
+denote the vector $(q_1, \ldots, q_{j-1}, q_{j+1}, \ldots, q_{|\Omega|})$.}
+There is a corresponding price function $p_j$ that gives the price for
+purchasing an infinitesimal quantity of shares in security $j$ and is used to
+quote a share price to market participants:
+%
+$$ p_j = \frac{q_j}{\sum_k q_k^2} $$
+
+This share price $p_j$ should not be used to calculate the cost of a
+transaction since an agent's participation in the market will instantly change
+this value. The purpose of a prediction market is to elicit private information
+on some future event: we can calculate the probability $\pi_j$ of outcome $j$ using
+information about the activity within the market: $\pi_j = p_j^2$.
+
+\subsubsection{Scoring Rule Markets}
+
+A scoring rule is used to assign probabilities to a set of mutually exclusive
+outcomes. When the scoring rule is proper, it can be converted to an automated
+market maker that uses a Market Scoring Rule (MSR). Again at the heart of a MSR
+is the cost function $C(\vect{q})$, which is a means of recording the total
+amount of money spent in the market by traders as a function of the total
+number of shares in circulation. Traders wishing to purchase $q_j' - q_j$
+shares of security $j$ must again pay $C(\vect{q}_{-j}, q_j')-C(\vect{q})$.
+Note that in both parimutuel markets and scoring rule markets, these
+rules encode sell transactions as well, in which case $q_j' < q_j$. We cannot
+use $C$ directly to quote a share price to the user since we first need to know
+what quantity they to buy or sell: we use its derivative $p = \partial C /
+\partial q_j$ to again quote the cost for an infinitesimal quantity of shares. 
+As an example, the quadratic scoring rule gives the reward $Q(\vect{r},i)$ if
+the $i$th event occurs, given the probability vector $\vect{r}$. The cost
+function corresponding to the quadratic scoring rule is:
+%
+$$
+C(\vect{q}) =
+\frac{\sum_j q_j}{|\Omega|} + \frac{\sum_j q_j^2}{4b}  +
+\frac{\left( \sum_j q_j \right)^2}{4b|\Omega|} - \frac{b}{|\Omega|}
+$$
+
+Scoring rule markets pay typically pay out \$1 for each share held of a
+security whose outcome was positive, and \$0 otherwise. In contrast, parimutuel
+markets can have a different payoff per share since they pay out an equal
+portion of the total amount wagered per share held to winning shareholders. In
+this project we implement the former. The following section will outline some
+existing prediction markets as well as important results from the literature.

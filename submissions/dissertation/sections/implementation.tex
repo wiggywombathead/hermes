@@ -64,7 +64,7 @@ required in the future this will be a simple addition to make.
 Securities are also simple entities to store, whose fields fully describe a
 market: \emph{bet} stores a string that specifies the wager being made;
 \emph{shares} stores the total number of shares (referred to as $q$ in
-Section~\ref{sec:marketScoringRules}); \emph{deadline} holds the date and time
+Section~\ref{sec:tradingMechanisms}); \emph{deadline} holds the date and time
 by which the event's outcome will have been realised; and \emph{outcome} is
 initially null and eventually set to the payout price per share, or the
 fraction of arbiters reporting a positive outcome, once the deadline has
@@ -180,14 +180,14 @@ arbitration stage, to ensure arbiters are incentivised to report truthfully.
 These features are implemented in the files \code{msr.lisp} and
 \code{market.lisp}.
 
-As discussed in Section~\ref{sec:marketScoringRules}, we will be using a Market
-Scoring Rule as our automated market maker. In order to achieve the guarantees
-of Freeman, Lahaie, and Pennock's mechanism we must use a scoring rule that is
-strictly proper, which can then be implemented as a market maker based on a
-convex cost function. We use the commonly-used Logarithmic Market Scoring Rule
-(LMSR) created by Robin Hanson~\cite{Hanson2007}, whose cost function is
-defined as follows:
-
+As discussed in Section~\ref{sec:tradingMechanisms}, we will be implementing
+our automated market maker using a scoring rule market. In order to achieve the
+guarantees of Freeman, Lahaie, and Pennock's mechanism we must use a scoring
+rule that is strictly proper, which can then be implemented as a market maker
+based on a convex cost function. We use the commonly-used Logarithmic Market
+Scoring Rule (LMSR) created by Robin Hanson~\cite{Hanson2007}, whose cost
+function is defined as follows:
+%
 \begin{equation}
 	\label{eq:LMSR}
 	C(\vect{q}) = b \log \left( \sum_j e^{q_j/b} \right)
@@ -202,7 +202,7 @@ $\vect{q}=( 0 \quad q_1 - q_0 )$, where $q_0$ and $q_1$ are the quantity of
 shares bought by agents in the negative and positive outcomes, respectively.
 This gives us the following cost function for LMSR in the binary setting, where
 $q=q_1-q_0$:
-
+%
 \begin{equation}
 	\label{eq:LMSRbinary}
 	C_b (q) = b \log (1 + e^{q/b})
@@ -218,7 +218,7 @@ charge an agent for a transaction, we compute $C_b(q')-C_b(q)$ for an agent
 wishing to take the total quantity of shares from $q$ to $q'$, and this also
 encodes sell transactions. The share price function is the derivative of the
 cost function, which is in our case:
-
+%
 \begin{equation}
 	\label{eq:LMSRprice}
 	p_b(q) = \frac{e^{q/b}}{1+e^{q/b}}
@@ -395,7 +395,7 @@ compute the update probabilities $\mu_1$ and $\mu_0$, used in the
 1/prior-with-midpoint mechanism. We use these to compute the update
 probabilities $\mu_1^i$ for each arbiter $i$, using a randomly chosen peer
 arbiter $j$, as follows:
-
+%
 \begin{equation}
 	\label{eq:updateProbabilities}
 	\begin{aligned}
@@ -523,7 +523,7 @@ with a similar look and feel in a concise manner, and only requires us to
 specify the content that makes the page unique via the \code{body} parameter.
 
 \begin{lstlisting}[
-	label={lst:defineURL},
+	label={lst:standardPage},
 	caption={Macroising webpage definitions}]
 (defmacro standard-page ((&key title) &body body)
   " template for a standard webpage "
@@ -756,7 +756,7 @@ potentially knowing of the outcome, and instead reloads the page and lists the
 market as ``unresolved'' and no longer ``active''.
 
 \begin{lstlisting}[
-	label={lst:javascriptTransactionCost},
+	label={lst:setTimer},
 	caption={Triggering the close of trading automatically}]
 (defun-ajax ajax-set-timer ()
 			(*ajax-processor* :method :POST :callback-data :json)
