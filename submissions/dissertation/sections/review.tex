@@ -1,5 +1,7 @@
 \section{Literature Review}
 
+\label{sec:literatureReview}
+
 % Iowa Electronic Markets
 % PredictIt, PredictAlot
 % Intrade
@@ -44,29 +46,26 @@ $2^{63}$. \emph{Predictalot} then kept track of the odds, computing them by
 scanning through all of the predictions made by users. This prediction market
 was the original inspiration for this project in investigating prediction
 markets. Using a Market Scoring Rule for such a market would involve computing
-a summation over the entire outcome space $\Omega$, an intractable, \#P-hard
-problem akin to counting the number of variable assignments that satisfy a CNF
-formula, or or the number of subsets in a list of integers that sum to zero.
+a summation over the entire outcome space $\Omega$, an intractable problem akin
+to counting the number of subsets in a list of integers that sum to zero.
 Instead, they employ an implementation of importance sampling, a technique for
 estimating properties of a particular probability distribution using only
 samples generated from a different distribution. This ``naive'' approach is
 then improved upon by the work of Dud\'ik, Lahaie, and
 Pennock~\cite{Dudik2012}, who use convex optimisation and constraint generation
-to develop a market maker which is tractable. This approach lies somewhere
-between treating all securities as independent and a fully combinatorial,
-``ideal'' market maker, propagating information among related securities for
-more complete information aggregation. The ways in which their odds are
-calculated are also natural: for example, a large bet on a team to win the
-entire tournament automatically increases the odds that the same team will
-progress past the first round, since they would not be able to win the
-competition without doing so. This work is then improved upon by Kroer,
-Dud\'ik, Lahaie, and Balakrishnan~\cite{Kroer2016}, in which they use integer
-programming to achieve arbitrage-free trades, or always profitable risk-free
-trades. On top of achieving bounded loss, a crucial element behind a market
-mechanism operating in the real world and avoiding bankruptcy, avoiding
-arbitrage is desirable as it leads to more accurate forecasts: since users
-cannot make risk-free profits, they are forced to bet according to their true
-beliefs.
+to develop a tractable market maker. This approach is a compromise between
+treating all securities as independent and a fully combinatorial, ``ideal''
+market maker, but still allows for information to be gathered among related
+securities. This allows for them to compute odds that make sense: for example,
+a large bet on a team to win the entire tournament would also increase their
+odds at every other stage in the tournament, since they must win these to even
+reach the final. Kroer, Dud\'ik, Lahaie, and Balakrishnan~\cite{Kroer2016} use
+integer programming to remove trades which are always profitable and incur no
+risk. In other words, they ensure all trades are arbitrage-free. On top of
+achieving bounded loss, a crucial element behind a market mechanism operating
+in the real world and avoiding bankruptcy, avoiding arbitrage is desirable as
+it leads to more accurate forecasts: since users cannot make risk-free profits,
+they are forced to bet according to their true beliefs.
 
 \subsection{Decentralised Markets}
 
@@ -172,3 +171,48 @@ introducing an ambiguous market.
 	likely to become President.}
 	\label{fig:predictit}
 \end{figure}
+
+\subsection{A Note on \emph{Predictalot}}
+
+As we will cover in the following section, the goals of this project are more
+concerned with the game-theoretic aspects of implementing a decentralised
+prediction market. This involves encouraging users to act in the desired
+manner, which in our case means ``telling the truth'' about both their beliefs
+on an event's outcome as well as their observation of the result. Since
+combinatorial prediction markets are often centralised, meaning bets come
+straight from the system and not its users, all users have to do is choose to
+participate in the market at what they view as the correct price, hence there
+is much less opportunity for manipulation. For this reason, combinatorial
+prediction markets are more concerned with the computational aspects of
+offering combinatorial securities to its traders, and in particular how to
+compute accurate prices on combinations of interrelated securities. Both
+decentralised and combinatorial settings are interesting in their own right,
+and both can achieve an added level of expressiveness compared to a traditional
+prediction market such as the IEM. Here we will briefly describe approaches
+taken to improving the efficiency of pricing in the \emph{Predictalot}
+prediction market.
+
+We will first discuss the hardness of using a Market Scoring Rule to calculate
+prices in a combinatorial market. The class NP is the set of decision problems
+for which, given an input to the problem and a proposed solution, the
+``certificate'', verification that the certificate is indeed a correct solution
+can be done in polynomial time. By self-reducibility, the search version of the
+problem is no harder than the decision version. The class \#P consists of
+\emph{functions} that count the number of solutions to NP search problems. A
+function $g$ is \#P-hard if, for every function $f$ in \#P, given an oracle for
+$g$ we can compute $f$ in polynomial time -- that is, computing $g$ is at least
+as hard as any other function $f$ in \#P. Chen et al.~\cite{Chen2008} show that
+computing the price and cost functions of a MSR in a combinatorial market is
+\#P-hard, even when traders are restricted to betting on the disjunctions or
+conjunctions of two events. They do this via a reduction to the \#P-hard
+function \textsc{\#2-SAT}, which counts the number of satisfying assignments of
+a CNF formula, where each clause has two literals. 
+
+Dud\'ik et al.~\cite{Dudik2012} restrict the bidding language to achieve
+tractability. This is done by firstly calculating prices as if markets were
+independent then detecting an minimising arbitrage. Opportunities for arbitrage
+are detected using constraint generation, in which arbitrage occurs when the
+price falls below a certain level, and this is minimised using optimisation
+methods. Kroer et al.~\cite{Kroer2016} 
+
+\textbf{TODO}

@@ -517,8 +517,15 @@
 
 	  (setf new-budget (- budget paid))
 
-	  ;; update the current user's budget and transfer to the bank
-	  (db:pay-bank session-user paid)
+	  ;; only pay the bank if the user can afford it
+	  ;; TODO: deal with more gracefully?
+	;  (if (> budget paid)
+	;	(db:pay-bank session-user paid)
+	;	(redirect "/index"))
+
+	  (if (mkt:sufficient-funds? budget paid shares fee)
+		(db:pay-bank session-user paid)
+		(redirect "/index"))
 
 	  ;; insert the new security and record that USER now owns SECURITY
 	  (let ((inserted-security (db:insert-security bet deadline shares)))
@@ -669,13 +676,18 @@
 	  (setf paid (+ total-price fee))
 	  (setf new-budget (- budget paid))
 
+	  (format T "BUDGET: ~D, PAID: ~D, SHARES: ~D TOTAL: ~D~%"
+			  budget paid shares
+			  (+ budget paid shares))
+
+	  (if (mkt:sufficient-funds? budget paid shares fee)
+		(db:pay-bank session-user paid)
+		(redirect "/index"))
+
 	  ;; either add new portfolio entry, or update existing one
 	  (if (db:user-security-exists? session-user security)
 		(db:update-portfolio session-user security shares)
 		(db:add-portfolio-entry session-user security shares))
-
-	  ;; update the current user's budget and transfer to the bank
-	  (db:pay-bank session-user paid)
 
 	  (db:update-security-shares security new-outstanding)
 

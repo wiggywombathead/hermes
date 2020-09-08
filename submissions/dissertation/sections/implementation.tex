@@ -2,9 +2,9 @@
 
 \label{sec:implementation}
 
-In this section we shall detail our implementation of the peer prediction
-mechanism. The system consists of five independent parts, each responsible for
-a separate area of functionality. These are as follows:
+In this section we shall detail our implementation of the trading and peer
+prediction mechanism. The system consists of five independent parts, each
+responsible for a separate area of functionality. These are as follows:
 
 \begin{enumerate}
 	\item Database
@@ -35,6 +35,7 @@ securities, and allows us to store user positions as well as reports once the
 deadline has passed. The table definitions are as follows:
 
 \begin{table}[ht]
+	\label{tab:tableDefinitions}
 	\centering
 	\begin{tabular}{|c|c|c|}
 		\hline
@@ -53,6 +54,7 @@ deadline has passed. The table definitions are as follows:
 		& \emph{report} & \emph{positive belief} & \emph{negative belief} \\
 		\hline
 	\end{tabular} \\~\\
+	\caption{Table definitions in our database}
 \end{table}
 
 An entry in the \code{USER} table consists of a username and a budget. All
@@ -198,7 +200,7 @@ exclusive and exhaustive outcomes. Since we are only dealing with binary
 events, we can compute a share price based only on the number of shares bought
 for the positive outcome, and assume that buying shares in the negative outcome
 is equivalent to selling shares in the positive outcome. In this case, we have
-$\vect{q}=( 0 \quad q_1 - q_0 )$, where $q_0$ and $q_1$ are the quantity of
+$\vect{q}=( 0 , \, q_1 - q_0 )$, where $q_0$ and $q_1$ are the quantity of
 shares bought by agents in the negative and positive outcomes, respectively.
 This gives us the following cost function for LMSR in the binary setting, where
 $q=q_1-q_0$:
@@ -271,6 +273,17 @@ even if an agent were to buy an infinitesimal number of shares, meaning their
 transaction cost would be given by the share price function $p$, if the share
 price was \$0.99 and the transaction fee was set to 5\%, they would be required
 to pay $\$0.99 \cdot 1.05 = 1.0395$, greater than the maximum possible payout.
+In our market we implement a fixed trading fee of 5\% on all risk transactions.
+
+Obviously, we need to take into account a trader's budget when they are looking
+to make a transaction and if they cannot afford one, deny them the trade. This
+is simple for buy transactions, where their budget must exceed the cost. For a
+short sell, we need to ensure that the user will be able to cover the expense
+of buying back the shares in the worst case -- that is, the event occurs and
+they are required to buy back their position at \$1 per share. Hence our
+function, \code{sufficient-funds?}, ensures a user can only go short on a
+security if their budget plus the amount they are paid for selling is larger
+than the number of shares they are shorting.
 
 \subsection{Arbitration}
 
@@ -468,8 +481,8 @@ Equation~\ref{eq:updateProbabilities}, where the randomly chosen $j$ is simply
 the partner with whom they have been paired. We push these values to a list so
 we may then compute the minimum value of $\mu_1^i$ and maximum value of
 $\mu_0^i$ across all arbiters. Finally to compute the smallest $k$ to satisfy
-Equation~\ref{eq:kParameter} we set $k = \max_i 2|n_i|/m\delta$, and use this
-to pay arbiters according to Equation~\ref{eq:oneOverPrior}.
+Equation~\ref{eq:kBoundN} we set $k = \max_i 2|n_i|/m\delta$, and use this to
+pay arbiters according to Equation~\ref{eq:oneOverPrior}.
 
 \subsection{Server}
 

@@ -114,6 +114,8 @@ in the arbitration stage.
 
 \subsection{Arbitration Stage}
 
+\subsubsection{Outcome Reporting}
+
 The arbitration stage is concerned with determining the perceived outcome
 of the event $X$ from a subset of the total userbase, known as the
 ``arbiters'', who offer reports on what they observed the outcome to be.
@@ -154,7 +156,7 @@ events to occur. Witkowski~\cite{Witkowski2014} then generalised this to pay
 out different amounts depending on the signals reported by paired arbiters. For
 arbiters $i$ and $j$ with reports $\hat{x}_i$ and $\hat{x}_j$, the 1/prior
 mechanism pays a reward $u(\hat{x}_i, \hat{x}_j)$ as follows:
-
+%
 \begin{equation}
 	\label{eq:oneOverPrior}
 	u(\hat{x}_i, \hat{x}_j) =
@@ -181,7 +183,7 @@ Similarly, let $\mu_0^i$ be the probability that, given that agent $i$ receives
 a negative signal, another randomly chosen user receives a positive signal. We
 require a common value for these ``update'' probabilities across all agents, so
 we define the $\mu_1$ and $\mu_0$ as follows:
-
+%
 \begin{equation}
 	\begin{gathered}
 		\mu_1 := \min_i \mu_1^i \\
@@ -204,9 +206,9 @@ the 1/prior-with-midpoint parameter $k$ to the appropriate value such that they
 will receive weakly greater reward from the payment mechanism than they would
 by misreporting. With $m$ arbiters and $\delta = \mu_1 - \mu_0$, truthful
 reporting for arbiter $i$ is a best response if:
-
+%
 \begin{equation}
-	\label{eq:kParameter}
+	\label{eq:kBoundN}
 	k \ge \frac{2 |n_i|}{m \delta}
 \end{equation}
 
@@ -218,7 +220,7 @@ with a database for persistent storage. There are a number of useful packages
 provided by Quicklisp that allows all of this functionality to be implemented
 in Lisp. Using a single language to write the entire application -- as opposed
 to, say, a combination of HTML, PHP, MySQL, and Javascript -- encourages a
-cleaner and more flexible implementation and allows us to make full use of
+cleaner and more flexible implementation and allows us to make full use of the
 tools available to the language. A key advantage to using Lisp in particular is
 its focus on extensibility, and specifically its powerful macro system allows
 us to abstract away unnecessary details and write more generalised code. We
@@ -250,12 +252,13 @@ maps well to that expected by an HTML file, while allowing us to dynamically
 generate pages through the use of macros, making Lisp a suitable choice for
 such a purpose.
 
-Mito provides an interface with which we can connect to and interact with a
-Relational Database Management System while remaining within the Lisp
-environment. We opt for a MySQL backend, simply due to its familiarity, though
-this choice is largely immaterial given our simple requirements. We can compose
-more complex MySQL statement using SXQL, and this integrates well with Mito so
-that the two are effectively used as one library.
+Mito is an Object Relational Mapper (ORM) that provides an interface with which
+we can connect to and interact with a Relational Database Management System
+while remaining within the Lisp environment. We opt for a MySQL backend, simply
+due to its familiarity, though this choice is largely immaterial given our
+simple requirements. We can compose more complex MySQL statement using SXQL,
+and this integrates well with Mito so that the two are effectively used as one
+library.
 
 Parenscript allows us to incorporate Javascript into the site with the
 intention of improving user experience. Currently it is used as a means of

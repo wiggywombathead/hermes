@@ -6,7 +6,8 @@
 
 (defpackage :mkt
   (:use :cl)
-  (:export :calculate-fee))
+  (:export :calculate-fee
+		   :sufficient-funds?))
 
 (in-package :mkt)
 
@@ -39,3 +40,25 @@
 		(if buying-p
 		  (* +trading-fee+ share-price)
 		  (* +trading-fee+ (- 1 share-price)))))))
+
+(defun sufficient-funds? (budget amount shares fee)
+  " returns T if there are sufficient funds to make transaction "
+  ;; returns:
+  ;; - T : if we are buying shares and BUDGET > AMOUNT
+  ;; - T : if we are selling shares we own (FEE == 0)
+  ;; - T : if we are shorting shares and BUDGET + AMOUNT - SHARES > 0
+  ;; - NIL : otherwise
+
+  (if (> shares 0)
+
+	;; buy shares only if we have enough to cover cost and fee
+	(if (> budget amount)
+	  T
+	  NIL)
+
+	;; short shares only if we can cover if they lose i.e. we must buy them
+	;; back at a price of $1 per share
+	(if (or (> (+ budget (abs amount) shares) 0) (= 0 fee))
+	  T
+	  NIL)))
+

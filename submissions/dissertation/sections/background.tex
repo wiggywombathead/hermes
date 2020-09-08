@@ -121,20 +121,18 @@ $$
 (\mathds{1}_{\omega \in \phi} - p)
 $$
 
-This says that the order will receive a payoff of zero if the true world state
-$\omega$ does not appear in $\psi$, meaning the order is invalid and refunded
-to the user. Otherwise, the user will receive a payout of $(1-p)$ for each
-share they bought if $\omega \in \phi$, meaning the event occurred, otherwise
-they will only lose what they paid and receiving total payoff of $-p$ for each
-share. Each user $i$ has a payoff vector $\gamma_i$ induced by submitting
+in which $\omega \in \phi$ means outcome $\omega$ satisfies the Boolean formula
+$\phi$. This says that the order will receive an overall payoff of zero if the
+true world state $\omega$ does satisfy $\psi$, meaning the order is invalid and
+refunded to the user. Otherwise, the user will receive a payout of $(1-p)$ for
+each share they bought if $\omega$ satisfies $\phi$. If the event does not
+occur they will lose what they paid and receive a payoff of $-p$ for each of
+$q$ shares. Each user $i$ has a payoff vector $\gamma_i$ induced by submitting
 orders. It is the job of the auctioneer to determine which orders to accept:
 let $\alpha_i \in \{0,1\}$ indicate whether the auctioneer accepts an order
 from user $i$. Since they will collect the money paid by the trader and payout
 their winnings according to each user's payoff vector, the auctioneer receives
-payoff:
-$$
-\gamma_a = \sum_i -\alpha_i \gamma_i
-$$
+payoff: $$ \gamma_a = \sum_i -\alpha_i \gamma_i $$
 
 The \emph{indivisible matching problem} is the problem that, given a set of
 orders, does there exist a set of $\alpha_i \in \{0,1\}$ and $\sum_i \alpha_i
@@ -144,11 +142,11 @@ looking to accept some bundle of orders \emph{without risk}.
 
 \subsubsection*{Example}
 
-Suppose $\mathcal{E} = \{X_1, X_2\}$ and there are two orders: 1 wishes to buy
-two shares of security $S_{X_1}$ at 0.6 per share while 2 wishes to sell one
-shares of security $S_{X_1,X_2}$ for 0.2 per share. Assuming the auctioneer
-accepts both orders, the payoffs are as follows (note player 2's payoff vector
-is negated since they are selling):
+Suppose $\mathcal{E} = \{X_1, X_2\}$ and there are two orders: agent 1 wishes
+to buy two shares of security $S_{X_1}$ at 0.6 per share while agent 2 wishes
+to sell one shares of security $S_{X_1,X_2}$ for 0.2 per share. Assuming the
+auctioneer accepts both orders, the payoffs are as follows (note player 2's
+payoff vector is negated since they are selling):
 %
 \begin{equation*}
 	\begin{aligned}

@@ -14,6 +14,13 @@ never worse than its predecessor. Using Git and Github has been helpful in this
 regard, providing cloud storage and the ability to roll back to previous
 versions of the project if the current one is broken by a new feature.
 
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=\textwidth]{commits}
+	\caption{Weekly commits to Github}
+	\label{fig:commits}
+\end{figure}
+
 Meetings have been taken with this project's supervisor, Professor Matthias
 Englert to track progress. These were more regular towards the beginning of the
 project, though as it began to take more shape the consistency of these
@@ -54,81 +61,38 @@ Work after this point was focused on translating this terminal-based
 implementation to operate on a barebones web server, with the first steps to
 achieve persistent storage via interaction with a database. Since Mito's
 \code{deftable} macro is functionally very similar to that of Common Lisp's
-\code{defstruct}, after reading documentation on setting the system up
-correctly and connecting to it, this conversion was relatively straightforward.
-Similarly, the code to set up and begin defining webpages in our implementation
-is simple and hence took little time to set up. In the case of both the web
-server and the database, a significantly larger portion of time was spent
-deciding how to integrate features as they were developed into the system as a
-whole: there is the implicit assumption that each feature added incorporated
-not only the logic to get it working but also designing new webpages and adding
-to the database interface. Some issues were encountered trying to implement
-asynchronous communication with the server via Parenscript and Smackjack, and
-much time was spent getting this working. This highlights one of the drawbacks
-behind using both libraries: while they are well-documented in that their
-reference manuals detail each function they provide, it seems they are not
-widely used and hence have few practical examples online from which to learn.
+\code{defstruct}, this conversion was relatively straightforward. Similarly,
+the code to set up and begin defining webpages in our implementation is simple
+and hence took little time. In the case of both the web server and the
+database, a significantly larger portion of time was spent deciding how to
+integrate features as they were developed into the system as a whole: there is
+the implicit assumption that each feature added incorporated not only the logic
+to get it working but also designing new webpages and adding to the database
+interface. Some issues were encountered trying to implement asynchronous
+communication with the server via Parenscript and Smackjack, and much time was
+spent getting this working. This highlights one of the drawbacks behind using
+both libraries: while they are well-documented in that their reference manuals
+detail each function they provide, it seems they are not widely used and hence
+have few practical examples online from which to learn.
 
 Worthy of note is the two-week delay from the original deadline for the interim
 report, arising from the university-wide implementation of a two-week extension
 to all assessed work. We took the decision to take advantage of this decision
 by spending an extra two weeks to implement the arbitration stage to a greater
-degree of completion. This did not affect the overall
+degree of completion, in order to have more material for discussion in the
+interim report. This did not affect the overall progress of the project,
+however, since the two weeks worth of progress made during this time was simply
+borrowed from what would have been achieved in the two weeks after the original
+deadline.
 
 \textbf{TODO}
 
-%Firstly, although an early demonstration of the market and arbitration stages
-%was complete for the presentation, this did not yet use any persistent storage
-%or actual users. Therefore, to get these stages working as they would in the
-%final project, the website and database interface first needed implementing.
-%This has taken the majority of the time since the presentation, and includes
-%defining the various pages and forms with which the users interact with the
-%markets, as well as how we interact with the database to register, log in, and
-%pay users. As we will cover in the next section, there are only three main
-%areas of functionality left to target: asynchronous communication with the
-%server via AJAX calls, automation of the system regarding closing markets once
-%enough arbiters have submitted reports, and most importantly parameter tuning.
-%The latter has been given a large block of time to complete since there are
-%many values on which certain parameters depend, and it is imagined that
-%calculating these accurately will require care.
-
-%Secondly, the time dedicated to writing the interim report has been extended by
-%two weeks to reflect the extension to its deadline. Although it was not
-%initially required, the extra time that could be diverted towards developing
-%the systems while the writing of the report was delayed was useful in providing
-%more material to discuss. This was also caused in part by more focus than
-%anticipated being paid towards exam preparation.
-
-%\subsection{Next Steps}
-
-%% Parameter tuning which requires processing of all data submitted 
-%% Asynchronous database queries to keep page details accurate
-
-%The next task is to tune the parameters of the system to ensure truthful
-%reporting, since this is the entire reason for implementing the mechanism. This
-%includes setting transaction fee $f$ to the appropriate percentage and the
-%payment parameter $k$. It will also be important to fully automate the system,
-%meaning the server automatically decides when to close markets: this is
-%currently done by prompting the system to compute market outcomes, which is
-%insufficient. The final important feature to add is asynchronous server
-%communication -- although it does not necessarily add new functionality to the
-%core of the prediction market, it would dramatically increase usability. 
-
-%We plan to dedicate a significant portion of August to the writing of the
-%dissertation, to spread the workload more evenly and to allow features that are
-%developed later more time to be added into the report.  We hope to get feedback
-%on a draft of the dissertation three weeks before the final deadline so that
-%the following weeks can be spent refining the material, and for more versions
-%to be produced in the remaining time. This means we intend to get all required
-%goals working well before the end of the month, to ensure we are not making
-%considerable changes shortly before the deadline.
-
-%\begin{figure}[h]
-%	\centering
-%	\includegraphics[width=\textwidth]{new-schedule}
-%	\caption{Revised project timetable}
-%	\label{fig:new-schedule}
-%\end{figure}
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=\textwidth]{old-timetable}
+	\caption{The realised schedule}
+	\label{fig:new-timetable}
+\end{figure}
 
 \subsection{Ethics}
 
