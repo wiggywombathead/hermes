@@ -14,14 +14,14 @@ the relevant information from the informants and uses it to provide a
 prediction of the variable's realisation. In an ideal setting the mechanism
 should produce the same prediction as an omniscient forecast that has access to
 all information available to all informants. This may not be viable in
-practice, since each agent's information is private information, and so the
-mechanism must incentivise them to act in the desired truth-telling manner.
+practice, since each agent's information is private, and so the mechanism must
+incentivise them to act in the desired truth-telling manner.
 
 A prediction market is one mechanism that can provide such a forecast. In this
 setting the aggregator creates a financial security whose payoff is tied to the
 outcome of the variable. In the simpler case of binary events, such a security
 may pay out \$1 for each share held if the variable has a ``true'' or ``yes''
-outcome, and \$0 otherwise, however markets can be created for other types
+outcome, and \$0 otherwise, however other types of markets can be created,
 including discrete (``will the result of the match be a home win, away win, or
 a draw?''), continuous (``what will be the highest measured temperature in
 Coventry in September?''), or any combination of these types. Informants are
@@ -33,16 +33,16 @@ may be inclined to sell shares. The share price will be adjusted accordingly,
 and the aggregator can view the current price as the informant's combined
 belief of the outcome of the event.
 
-In this model there is a set $\Omega$ of possible states of the world and at
-any moment the world is in exactly one state $\omega \in \Omega$, though the
-informants do not know which. Each informant $i$ may however possess partial
-information regarding this true state, and this is represented by a partition
-$\pi_i$ of $\Omega$. The agent knows in which subset of this partition the true
-world state lies, but does not know the exact member of which is true. Given
-$n$ agents, their combined information $\hat{\pi}$ is the coarsest common
-refinement of the partitions $\pi_1, \ldots, \pi_n$.\footnote{A partition
-$\alpha$ of a set $X$ is a refinement of a partition $\rho$ of $X$ if every
-element of $\alpha$ is a subset of some element of $\rho$. In this case
+In the \emph{partition model of knowledge} there is a set $\Omega$ of possible
+states of the world and at any moment the world is in exactly one state $\omega
+\in \Omega$, though the informants do not know which. Each informant $i$ may,
+however, possess partial information regarding this true state, represented by
+a partition $\pi_i$ of $\Omega$. The agent knows in which subset of this
+partition the true world state lies, but does not know the exact member of
+which is true. Given $n$ agents, their combined information $\hat{\pi}$ is the
+coarsest common refinement of the partitions $\pi_1, \ldots, \pi_n$.\footnote{A
+partition $\alpha$ of a set $X$ is a refinement of a partition $\rho$ of $X$ if
+every element of $\alpha$ is a subset of some element of $\rho$. In this case
 $\alpha$ is \emph{finer} than $\rho$ and $\rho$ is \emph{coarser} than
 $\alpha$.}
 
@@ -50,32 +50,24 @@ We also assume a common prior probability distribution $P \in \Delta^{\Omega}$
 which describes the probabilities that all agents assign to the different world
 states before receiving any information. Once each agent receives their partial
 information, they form their posterior beliefs by restricting the common prior
-to the subset of their partition in which they know the true state to lie. For
-our purposes, a \emph{forecast} is an estimate of the expected value of the
-function $f : \Omega \rightarrow \{0,1\}$, known as an \emph{event}, which
-equals one for exactly one subset of $\Omega$ and 0 otherwise.
+to the subset of their partition in which they know the true state to lie.  A
+\emph{forecast} is an estimate of the expected value of the function $f :
+\Omega \rightarrow \{0,1\}$, known as an \emph{event}, which equals one for
+exactly one subset of $\Omega$ and 0 otherwise.
 
 As mentioned, there is an ideal ``omniscient'' forecast that uses the
 distribution $P$ restricted to the subset of $\hat{\pi}$ in which the true
-world state lies but which is impractical given the private nature of each
-agent's information. The goal is therefore a mechanism to incentivise agents to
-reveal their private information such that in equilibrium we achieve a forecast
-as close as possible to the omniscient one. Prediction markets offer the agents
-the chance of financial gain for revealing information regarding the expected
-value of $f(\omega)$, and the share price of the security can be interpreted as
-the collective forecast of the agents. In the following section we shall
-outline some of the different approaches one can take to designing the market
-mechanism itself: the best choice will vary for the setting and will depend on
-what is tractable given the types of bets that are on offer.
-
-In Section~\ref{sec:design} we shall
-outline the different approaches one can take to designing the prediction
-market mechanism itself and the one among them, a Market Scoring Rule, that we
-implement. Importantly, Market Scoring Rules are one of the ways to increase
-liquidity in the market as the system itself assumes the opposite side to any
-trade, meaning users may participate even when no other user wishes to buy or
-sell for what they are asking or bidding. This means a trade is always able to
-be executed, although without care the system could make consistent losses.
+world state lies -- this is difficult to achieve given the private nature of
+each agent's information. The goal is therefore to design a mechanism to
+incentivise agents to reveal their private information such that in equilibrium
+we achieve a forecast as close as possible to the omniscient one. Prediction
+markets offer the agents the chance of financial gain for revealing information
+on the expected value of $f(\omega)$, and the share price of the security can
+be interpreted as the collective forecast of the agents. In the remainder of
+the section we shall outline some of the different approaches to designing the
+market mechanism: the best choice will vary for the setting and will depend on
+what is tractable given the types of bets that are on offer. First we shall
+introduce combinatorial markets.
 
 \subsection{Combinatorial Prediction Markets}
 
@@ -86,40 +78,39 @@ outcomes to all other base events are known, and we wish to provide the
 opportunity to trade on any outcome $\omega \in \Omega$: with a set of base
 events of size $\mathcal{|E|}$ we would have a total outcome space of size
 $2^\mathcal{|E|}$.  With such a large outcome space it may therefore be
-impossible to even all the securities available in such a market. Combinatorial
-markets can make use of ``expressive'' bidding languages that represent
-collections of securities succinctly, including \emph{compound orders} and
-\emph{combined orders}.
+impossible to even all list the securities available in such a market.
+Combinatorial markets can make use of ``expressive'' bidding languages that
+represent collections of securities succinctly, including \emph{combined
+orders} and \emph{compound orders}.
 
 Combined orders allow a user to trade a collection of securities by specifying
 the securities they wish to buy or sell together as a bundle along with limit
 prices for each constituent security. If there is even a single security in the
 bundle that is not at least as ``good''\footnote{If we are buying we want a
 price less than or equal to the limit price, while the opposite is true if we
-are selling.} as its limit price, then no trade is made. Consider an agent's
-alternative if they wish to trade on all these securities in a
-non-combinatorial market: this means they would need to trade on each one
-individually. Throughout the execution of such a sequence of trades, however,
-market prices are subject to change, and in the worst case these could reduce
-or even reverse the utility of participating in such trades. Combined orders
-therefore protect its participants from such risk. Calculating assignments of
-securities to buyers in such a setting is reminiscent of the challenge faced
-in a combinatorial \emph{auction}, which known to be NP-hard.
+are selling.} as its limit price, then no trade is made. If an agent were to
+trade on these securities in a non-combinatorial market, they would need a
+trade to be executed on each one individually. Throughout the execution of such
+a sequence of trades, however, market prices would be subject to change, and in
+the worst case these fluctuations could reduce or even reverse the utility of
+participating in such trades. Combined orders therefore protect its
+participants from such risk. Calculating the assignment of securities to buyers
+in such a setting is as hard as the winner-determination problem faced by a
+combinatorial \emph{auction}, which known to be NP-hard.
 
 Compound orders are generalisations of combined orders and allow users to trade
-on any Boolean expression involving the set of base events. Now again the size
-of the outcome space is $2^\mathcal{|E|}$, but now users may select any
-collection of these worlds to bet on, giving a total of $2^{2^\mathcal{|E|}}$
-options. Agents now place orders by requesting $q$ shares of the security
-$S_{\phi|\psi}$ at share price $p$, where $S_{\phi|\psi}$ pays out \$1 if both
-Boolean formulae $\phi$ and $\psi$ are true, \$0 if only $\psi$ is true, and
-refunds the user if $\psi$ is false. These orders will yield a payoff
-$\gamma^{\langle \omega \rangle}$ depending on the state $\omega \in \Omega$,
-and can be written as:
-$$
-\gamma^{\langle \omega \rangle} = q \cdot \mathds{1}_{\omega \in \psi}
-(\mathds{1}_{\omega \in \phi} - p)
-$$
+on any Boolean expression on the set of base events. Now again the size of the
+outcome space is $2^\mathcal{|E|}$, but now there are $2^{2^\mathcal{|E|}}$
+subsets of these outcomes expressible with Boolean formulae. Agents now place
+orders by requesting $q$ shares of the security $S_{\phi|\psi}$ at share price
+$p$, where $S_{\phi|\psi}$ pays out \$1 if both Boolean formulae $\phi$ and
+$\psi$ are true, \$0 if only $\psi$ is true, and refunds the user if $\psi$ is
+false. These orders will yield a payoff $\gamma^{\langle \omega \rangle}$
+depending on the state $\omega \in \Omega$, and can be written as:
+%
+$$ \gamma^{\langle \omega
+\rangle} = q \cdot \mathds{1}_{\omega \in \psi} (\mathds{1}_{\omega \in \phi} -
+p) $$
 
 in which $\omega \in \phi$ means outcome $\omega$ satisfies the Boolean formula
 $\phi$. This says that the order will receive an overall payoff of zero if the
@@ -128,25 +119,25 @@ refunded to the user. Otherwise, the user will receive a payout of $(1-p)$ for
 each share they bought if $\omega$ satisfies $\phi$. If the event does not
 occur they will lose what they paid and receive a payoff of $-p$ for each of
 $q$ shares. Each user $i$ has a payoff vector $\gamma_i$ induced by submitting
-orders. It is the job of the auctioneer to determine which orders to accept:
-let $\alpha_i \in \{0,1\}$ indicate whether the auctioneer accepts an order
+orders. It is the job of the auctioneer to determine which orders to accept.
+Let $\alpha_i \in \{0,1\}$ indicate whether the auctioneer accepts an order
 from user $i$. Since they will collect the money paid by the trader and payout
 their winnings according to each user's payoff vector, the auctioneer receives
-payoff: $$ \gamma_a = \sum_i -\alpha_i \gamma_i $$
+payoff:
+%
+$$ \gamma_a = \sum_i -\alpha_i \gamma_i $$
 
-The \emph{indivisible matching problem} is the problem that, given a set of
+The \emph{indivisible matching problem} asks the question that, given a set of
 orders, does there exist a set of $\alpha_i \in \{0,1\}$ and $\sum_i \alpha_i
 \ge 1$ such that for any outcome $\omega$ the auctioneer receives payoff
 $\gamma_a^{\langle \omega \rangle} \ge 0$? In other words, the auctioneer is
 looking to accept some bundle of orders \emph{without risk}.
 
-\subsubsection*{Example}
-
-Suppose $\mathcal{E} = \{X_1, X_2\}$ and there are two orders: agent 1 wishes
-to buy two shares of security $S_{X_1}$ at 0.6 per share while agent 2 wishes
-to sell one shares of security $S_{X_1,X_2}$ for 0.2 per share. Assuming the
-auctioneer accepts both orders, the payoffs are as follows (note player 2's
-payoff vector is negated since they are selling):
+\textbf{Example} Suppose $\mathcal{E} = \{X_1, X_2\}$ and there are two orders:
+agent 1 wishes to buy two shares of security $S_{X_1}$ at \$0.6 per share while
+agent 2 wishes to sell one share of security $S_{X_1,X_2}$ for \$0.2 per
+share. Assuming the auctioneer accepts both orders, the payoffs are as follows
+(note player 2's payoff vector is negated since they are selling):
 %
 \begin{equation*}
 	\begin{aligned}
@@ -174,7 +165,7 @@ indivisible matching problem is NP-complete~\cite[Ch.~26]{AGTBook}. Although we
 do not focus on combinatorial prediction markets in this project, it is useful
 to illustrate the challenges of designing efficient market mechanisms. In
 particular, we are concerned with illiquidity, which arises when there is too
-little interaction for a trade to be executed.
+little participation in the market for a trade to be executed.
 
 \subsection{Trading Mechanisms}
 
@@ -186,27 +177,27 @@ Trading mechanisms are responsible for deciding which trades are executed, in
 what quantities, and at which price points. In the previous section, although
 users had to submit orders of a particular form, the auctioneer was free to
 accept any subset of the orders received: this section expounds upon \emph{how}
-trades may be chosen. There are numerous methods of implementing market trading
-mechanisms, including double auctions, market call auctions, and automated
-market makers. A Continuous Double Auction (CDA) is a method by which buyers
-are matched with sellers of a stock or security. The market maker keeps an
+trades may be chosen to be executed. These are called market trading
+mechanisms, and include double auctions, market call auctions, and automated
+market makers. A Continuous Double Auction (CDA) is a mechanism in which buyers
+are matched with sellers of a particular security. The market maker keeps an
 order book that tracks the bids, submitted by those looking to buy, and the
 asks, submitted by those looking to sell. Traders arrive asynchronously and
 place orders, and when two opposite orders match the trade is executed. CDAs
 are traditionally used in highly liquid markets, such as the New York Stock
 Exchange, where there are many bids for a given ask and vice versa. An issue
-with this approach is that it relies on high liquidity, as it requires that
-there is always a willing buyer and seller at a particular price and quantity
-in order to a trade to execute. In prediction markets there are far fewer
-participants than in a stock exchange, and this problem is made worse in
-combinatorial markets, in which case a trader's attention is split among an
-exponential number of securities making the likelihood that a buyer and seller
-are looking to trade on the same event exceptionally small. Prices may also not
-be informative of the true beliefs held by traders in CDAs: since all traders
-can see bids and asks as they are submitted sellers may be encouraged to ask
-less than what they truly believe a security's ``true'' value to be in order to
-beat out another seller and make a profit. This is not useful in a prediction
-market setting, where we want to elicit the true beliefs from users.
+with this approach is that it relies on there always being a willing buyer and
+seller at a particular price and quantity in order to execute a trade.
+Prediction markets have far fewer participants than stock exchanges, and the
+problem of low liquidity is made even worse in combinatorial markets, in which
+a trader's attention is split among an exponential number of securities. This
+makes the likelihood that a buyer and seller are looking to trade on the same
+event exceptionally small. Prices may also not be informative of the true
+beliefs held by traders in CDAs: since all traders can see bids and asks as
+they are submitted sellers may be encouraged to ask less than what they truly
+believe to be a security's ``true'' value in order to undercut another seller
+and make a profit. This is not useful in a prediction market setting, where we
+want to elicit the true beliefs from users.
 
 These problems arising from market illiquidity can be averted by using an
 automated market maker, in which a price maker is nearly always willing to
@@ -216,13 +207,14 @@ the market maker. This ensures that, if the price is desirable, participants
 are always able to make a trade. An automated market maker is not typically
 used in real-world markets since always assuming the opposite side to any trade
 would likely result in significant losses for ``the house''; in play-money
-markets this is not such an issue as losses are less detrimental with no
+markets this is not such an issue as losses are less detrimental and have no
 real-world negative value. In general there are three properties that an
 automated market maker should satisfy in order to be of practical use: traders
 should have an incentive to participate in the market whenever their beliefs
 would change the price; the computation of market prices should be tractable;
-and the market's loss should be bounded. We have two options for implementing
-automated market makers: as a parimutuel market or using a Market Scoring Rule.
+and the market's loss should be bounded. We present two options for
+implementing automated market makers: as a parimutuel market or using a Market
+Scoring Rule.
 
 \subsubsection{Parimutuel Markets}
 
@@ -240,7 +232,7 @@ function is:
 %
 $$ C(\vect{q}) = \sqrt{\sum_j q_j^2} $$
 
-A trader wishing to buy $q_j' - q_j$ shares of security $j$, who changes the
+A trader wishing to buy $q_j' - q_j$ shares of security $j$, thus changing the
 number of outstanding shares of $j$ from $q_j$ to $q_j'$, pays the market
 $C(\vect{q}_{-j}, q_j') - C(\vect{q})$.\footnote{We use $\vect{q}_{-j}$ to
 denote the vector $(q_1, \ldots, q_{j-1}, q_{j+1}, \ldots, q_{|\Omega|})$.}
@@ -253,26 +245,28 @@ $$ p_j = \frac{q_j}{\sum_k q_k^2} $$
 This share price $p_j$ should not be used to calculate the cost of a
 transaction since an agent's participation in the market will instantly change
 this value. The purpose of a prediction market is to elicit private information
-on some future event: we can calculate the probability $\pi_j$ of outcome $j$ using
-information about the activity within the market: $\pi_j = p_j^2$.
+on some future event: we use the information we have on user participation in
+the market to compute probability $\pi_j$ of outcome $j$ as $\pi_j = p_j^2$.
 
 \subsubsection{Scoring Rule Markets}
 
 A scoring rule is used to assign probabilities to a set of mutually exclusive
-outcomes. When the scoring rule is proper, it can be converted to an automated
-market maker that uses a Market Scoring Rule (MSR). Again at the heart of a MSR
-is the cost function $C(\vect{q})$, which is a means of recording the total
-amount of money spent in the market by traders as a function of the total
-number of shares in circulation. Traders wishing to purchase $q_j' - q_j$
-shares of security $j$ must again pay $C(\vect{q}_{-j}, q_j')-C(\vect{q})$.
-Note that in both parimutuel markets and scoring rule markets, these
-rules encode sell transactions as well, in which case $q_j' < q_j$. We cannot
-use $C$ directly to quote a share price to the user since we first need to know
-what quantity they to buy or sell: we use its derivative $p = \partial C /
-\partial q_j$ to again quote the cost for an infinitesimal quantity of shares. 
-As an example, the quadratic scoring rule gives the reward $Q(\vect{r},i)$ if
-the $i$th event occurs, given the probability vector $\vect{r}$. The cost
-function corresponding to the quadratic scoring rule is:
+outcomes. When the scoring rule is proper\footnote{A scoring rule giving the
+highest expected reward for reporting the true distribution.}, it can be
+converted to an automated market maker that uses a Market Scoring Rule
+(MSR)~\cite{Hanson2003}.  Again at the heart of a MSR is the cost function
+$C(\vect{q})$, which is a means of recording the total amount of money spent in
+the market by traders as a function of the total number of shares in
+circulation. Traders wishing to purchase $q_j' - q_j$ shares of security $j$
+must again pay $C(\vect{q}_{-j}, q_j')-C(\vect{q})$. Note that in both
+parimutuel markets and scoring rule markets, these rules also encode sell
+transactions, in which case $q_j' < q_j$. We cannot use $C$ directly to quote a
+share price to the user since we first need to know what quantity they to buy
+or sell: we use its derivative $p = \partial C / \partial q_j$ to again quote
+the cost for an infinitesimal quantity of shares.  As an example, the quadratic
+scoring rule gives some reward $Q(\vect{r},i)$ if the $i$th event occurs, given
+the probability vector $\vect{r}$. The cost function corresponding to the
+quadratic scoring rule is:
 %
 $$
 C(\vect{q}) =
@@ -280,9 +274,9 @@ C(\vect{q}) =
 \frac{\left( \sum_j q_j \right)^2}{4b|\Omega|} - \frac{b}{|\Omega|}
 $$
 
-Scoring rule markets pay typically pay out \$1 for each share held of a
-security whose outcome was positive, and \$0 otherwise. In contrast, parimutuel
-markets can have a different payoff per share since they pay out an equal
-portion of the total amount wagered per share held to winning shareholders. In
-this project we implement the former. The following section will outline some
-existing prediction markets as well as important results from the literature.
+Scoring rule markets typically pay out \$1 for each share held of a security
+whose outcome was positive, and \$0 otherwise. In contrast, parimutuel markets
+can have a different payoff per share since they pay out an equal portion of
+the total amount wagered per share held to winning shareholders. This project
+implements the former. The following section will outline some existing
+prediction markets as well as important results from the literature.

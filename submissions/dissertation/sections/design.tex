@@ -13,8 +13,8 @@
 
 As mentioned our design of the prediction market is based on the peer
 prediction mechanism proposed by Freeman et al.~\cite{Freeman2017}. In this
-section we will present the main ideas presented in their work and give an
-overview of the mechanism itself.
+section we will outline the main ideas presented in their work and give an
+overview of the peer prediction mechanism.
 
 We are interested in setting up a prediction market for outcome of a binary
 random variable $X \in \{0,1\}$. We will use the terms ``market'', ``stock'',
@@ -32,7 +32,7 @@ own while those with short positions will buy back their shares at a price of
 lost money since they receive no money back from their initial investment,
 while short users will profit as they must ``buy back'' their shares at a price
 of \$0 per share. This market is different in that market outcomes are set as
-the proportion of users that reported a positive outcome. Therefore, even if a
+the proportion of arbiters that reported a positive outcome. Therefore, even if a
 user has gone long on a security, this must have been at or below the right
 price to make a profit, since it is not necessarily the case that 100\% of the
 users reporting on the market agree on its outcome.
@@ -41,22 +41,22 @@ Since we rely heavily on user participation for the mechanism to run correctly,
 it is important that users act in the desired manner. This mechanism
 incentivises users to act truthfully in two aspects: firstly, users are
 encouraged to trade on their belief of the market's realised outcome, rather
-than, for example, how a specific news source will report on it, since this
-outcome is determined entirely by the community, each individual of which will
-have access to their own news sources of varying biases; secondly, it is in a
-user's best interests to report on market outcomes truthfully, since they can
-receive no better payoff by attempting to manipulate the system. The same is
-true even if an otherwise rogue reporter held a position in the market.
-Therefore, we are able to gather accurate public sentiment on the event itself
-as well as its outcome, and ambiguous securities are dealt with more gracefully.
+than, for example, how a specific news source will report on it, since the
+outcome is determined entirely by the community and each arbiter will have
+access to their own news sources of varying biases; secondly, it is in a user's
+best interests to report on market outcomes truthfully, since they can receive
+no better payoff by attempting to manipulate the system, regardless of whether
+they hold a position in the market. Therefore, we are able to gather accurate
+public sentiment on the event itself as well as its outcome, and ambiguous
+securities are dealt with more gracefully.
 
 These considerations also allow us to achieve certain useful guarantees. For
 example, in order to incentivise reporters to act truthfully, we must pay them
 more than what they would otherwise gain from attempting to manipulate the
 system. We can use this knowledge, coupled with what we know stakeholders are
-expecting to be paid out, in order to bound the amount we must pay to
-ensure incentive compatibility. In this way we can ensure that the system is
-sustainable and the system's loss is never unbounded.
+expecting to be paid out, to bound the amount we must pay to ensure incentive
+compatibility. Thus we can ensure that the system is sustainable and the
+system's loss is bounded.
 
 In the following sections, we shall outline the mechanism we implement from a
 theoretical standpoint. 
@@ -70,28 +70,22 @@ theoretical standpoint.
 The market stage allows users to create markets for any bet they desire and
 specifies the how the share price reacts according to user participation. As we
 implement a decentralised market, we place no restriction on the bet that can
-be placed other than that it must be binary, resulting in either a ``yes'' or a
-``no''. In any market, there are two sides to any trade: one side offers some
-number shares, while there is some party that must be willing to purchase this
-number of shares at this price. As we have covered in
-Section~\ref{sec:tradingMechanisms}, there are a number of options available
-for implementing the market trading mechanism. We implement a scoring rule
-market, in which users must pay $C(\vect{q}_{-j}, q_j')-C(\vect{q})$ to change
-the total number of outstanding shares of security $j$ from $q_j$ to $q_j'$.
-Since market prices are dynamic we quote instantaneous share price to users
-with its derivative $p_j$ -- this is also used to calculate the trading fee on
-a given transaction, which raises funds to pay arbiters in the following stage
-of the mechanism.
+be placed other than that its outcome must be binary. As we mention in
+Section~\ref{sec:tradingMechanisms}, we implement a scoring rule market, in
+which users must pay $C(\vect{q}_{-j}, q_j')-C(\vect{q})$ to change the total
+number of outstanding shares of security $j$ from $q_j$ to $q_j'$.  Since
+market prices are dynamic we quote instantaneous share price to users with its
+derivative $p_j$ -- this is also used to calculate the trading fee on a given
+transaction, which raises funds to pay arbiters in the following stage of the
+mechanism.
 
 \subsubsection{Trading fees}
 
-In addition to implementing a Market Scoring Rule to quote the share price of a
-given security and calculate the necessary payments for buying or selling
-shares in a given market, the market stage is responsible for implementing
-trading fees. As mentioned, the mechanism we implement is not budget balanced,
-meaning the market must be subsidised in order to pay the correct winnings to
-stakeholders when market outcomes are realised. Trading fees are therefore used
-to raise these subsidies. For any given market, buying shares will push the
+In addition to calculating transaction costs and share prices via the MSR, the
+market stage is responsible for implementing trading fees. As mentioned, the
+mechanism we implement is not budget balanced, meaning the market must be
+subsidised in order to pay arbiters for submitting outcome reports. Trading
+fees raise these subsidies. For any given market, buying shares will push the
 share price $p$ upwards towards \$1, while selling shares will push it towards
 \$0. There are two types of transactions that a user may be involved in: one in
 which a trader is increasing their risk, and one in which a user is liquidating
@@ -101,48 +95,48 @@ shares she would simply be liquidating shares that have already been sold to
 her, while if she were to buy additional shares or sell more than ten, then she
 would be increasing her risk. Risk transactions are defined analogously for a
 user buying shares. Trading fees are only imposed on transactions in which a
-user increases their risk, and can be viewed as a fee on the worst-case loss
-incurred by the agent. Specifically, for fixed system parameter $f$ and for
-transactions in which a user increases their risk, a buy transaction that
-pushes share price to $p$ incurs an additional charge of $fp$, while a sell
-transaction that pushes share price to $p$ incurs additional charge of
-$f(1-p)$. Users may trade shares in a given security as long as they have
-enough funds to make the transaction (including the fee), and as long as the
-deadline has not yet passed. After the market expires, stakeholders' positions
-are final and we then determine the outcome of the market via peer prediction
-in the arbitration stage.
+user increases their risk, and can be viewed as a fee on their worst-case loss.
+Specifically, for fixed system parameter $f$ and for transactions in which a
+user increases their risk, a buy transaction that pushes share price to $p$
+incurs an additional charge of $fp$, while a sell transaction that pushes share
+price to $p$ incurs additional charge of $f(1-p)$. These fees also allow us to
+bound the maximum payout we must pay to a stakeholder, since they bound share
+prices away from \$0 and \$1. Users may trade shares in a given security as
+long as they have enough funds to make the transaction (including the fee), and
+as long as the deadline has not yet passed. After the market expires,
+stakeholders' positions are final and we then determine the outcome of the
+market via peer prediction in the arbitration stage.
 
 \subsection{Arbitration Stage}
 
 \subsubsection{Outcome Reporting}
 
-The arbitration stage is concerned with determining the perceived outcome
-of the event $X$ from a subset of the total userbase, known as the
-``arbiters'', who offer reports on what they observed the outcome to be.
-Specifically, each arbiter $i$ receives a private signal $x_i \in \{0,1\}$ that
-tells them the result of the event -- this is analogous to reading the news,
-watching the match, even hearing about it from a friend, and will vary from
-market to market. The arbiter then submits a report $\hat{x}_i \in \{0,1\}$ to
-the system that tells it what they believe the outcome to be. Note that since
-the signal they receive is private information, we have no way of determining
-whether this report is what they truly observed, or whether they are trying to
-manipulate the system for their own gain. Instead, we incentivise arbiters to
-act truthfully by paying them a reward if their report agrees with another
-randomly chosen arbiter: for this we implement the ``1/prior with midpoint''
-mechanism, which we will detail below.
+The arbitration stage is concerned with determining the perceived outcome of
+the event $X$ from a subset of the community, known as arbiters, who offer
+reports on the outcome they observed. Specifically, each arbiter $i$ receives a
+private signal $x_i \in \{0,1\}$ that tells them the result of the event --
+this is analogous to reading the news, watching the match, even hearing about
+it from a friend, and will vary from market to market. The arbiter then submits
+a report $\hat{x}_i \in \{0,1\}$ to the system that tells it what they believe
+to be the outcome. Since the signal they receive is private information, we
+have no way of determining whether this report is what they truly observed or
+whether they are lying. Instead, we incentivise arbiters to act truthfully by
+paying them a reward if their report agrees with another randomly chosen
+arbiter: for this we implement the ``1/prior with midpoint'' mechanism, which
+we will detail below.
 
 Once all reports have been collected and the arbiters paid, the outcome of the
 market $\hat{X} \in [0,1]$ is set to the proportion of arbiters that reported a
-positive outcome. This differentiates this mechanism from traditional
-prediction markets, in which shares of a security will pay out \$1 if the event
-occurred, and \$0 otherwise. Stakeholders are then paid out in the usual, where
-those with long positions are paid out $\hat{X}$ for each share owned, while
-those with short positions must buy them back at $\hat{X}$ per share. This
-should not change how traders view the security: if they have information
-telling them the event will occur they will still buy into the market if the
-share price is appropriate, while if they believe the event is unlikely they
-will continue to sell. The mechanism simply accommodates for the ambiguous bets
-possible as a result of being made by the community.
+positive outcome. This differs from traditional prediction markets, in which
+shares of a security will pay out \$1 if the event occurred, and \$0 otherwise.
+Stakeholders are then paid out in the usual manner, where those with long
+positions are paid out $\hat{X}$ for each share owned, while those with short
+positions must buy them back at $\hat{X}$ per share. This should not change how
+traders view the security: if they have information telling them the event will
+occur they will still buy into the market if the share price is appropriate,
+while if they believe the event is unlikely they will continue to sell. The
+mechanism simply accommodates for the possibly ambiguous bets made by the
+community.
 
 \subsubsection{1/prior mechanism}
 
@@ -175,30 +169,26 @@ towards \$0. Everyone can see this price, and if it differs from a user's
 beliefs they will participate in the market and alter the price accordingly,
 making it a sensible choice for the common prior.
 
-The modification introduced by Freeman et al.~\cite{Freeman2017} of the 1/prior
-mechanism is simple and requires two extra values to be computed. Let $\mu_1^i$
-be the probability that, given that agent $i$ receives a positive signal of the
+The modification introduced by Freeman et al.~\cite{Freeman2017} to the 1/prior
+mechanism is simple and requires two additional values. Let $\mu_1^i$ be the
+probability that, given that agent $i$ receives a positive signal of the
 event's outcome, another randomly chosen user also receives a positive signal.
 Similarly, let $\mu_0^i$ be the probability that, given that agent $i$ receives
 a negative signal, another randomly chosen user receives a positive signal. We
 require a common value for these ``update'' probabilities across all agents, so
 we define the $\mu_1$ and $\mu_0$ as follows:
 %
-\begin{equation}
-	\begin{gathered}
-		\mu_1 := \min_i \mu_1^i \\
-		\mu_0 := \max_i \mu_0^i
-	\end{gathered}
-\end{equation}
+\begin{equation} \begin{gathered} \mu_1 := \min_i \mu_1^i \\ \mu_0 := \max_i
+\mu_0^i \end{gathered} \end{equation}
 
 The modified payment mechanism is now simply Equation~\ref{eq:oneOverPrior}
 with $\mu$ replaced by $(\mu_1 + \mu_0)/2$. This is the
 ``1/prior-with-midpoint'' mechanism and guarantees that the incentives for
 arbiters are always the same, no matter the signal they receive. The arbiter
 with the greatest incentive to misreport -- that is, an arbiter with a large
-stake in the market in which they are reporting -- has their incentive to
-misreport weakly decreased by using the midpoint $(\mu_1 + \mu_0)/2$ in the
-payment rule as opposed using $\mu$ in the standard version.
+stake in the market in which they are reporting -- has this incentive weakly
+decreased by using replacing $\mu$ with the midpoint $(\mu_1 + \mu_0)/2$ in the
+payment rule.
 
 In particular, suppose arbiter $i$ holds a position of $n_i$ securities in the
 market. We can ensure truthful reporting is a best response for $i$ by setting
@@ -214,24 +204,23 @@ reporting for arbiter $i$ is a best response if:
 
 \subsection{Tools}
 
-In order to write such a web application, we will need a platform on which to
-host the server, the ability to define webpages, and a means of interacting
-with a database for persistent storage. There are a number of useful packages
-provided by Quicklisp that allows all of this functionality to be implemented
-in Lisp. Using a single language to write the entire application -- as opposed
-to, say, a combination of HTML, PHP, MySQL, and Javascript -- encourages a
-cleaner and more flexible implementation and allows us to make full use of the
-tools available to the language. A key advantage to using Lisp in particular is
-its focus on extensibility, and specifically its powerful macro system allows
-us to abstract away unnecessary details and write more generalised code. We
-discuss this in greater detail in Section~\ref{sec:implementation}.
+In order to write our web application, we will need a platform on which to host
+the server, the ability to define webpages, and a means of interacting with a
+database for persistent storage. There are a number of useful packages provided
+by Quicklisp that allows all of this functionality to be implemented in Lisp.
+Using a single language to write the entire application -- as opposed to, say,
+a combination of HTML, PHP, MySQL, and Javascript -- encourages a cleaner and
+more flexible implementation and allows us to make full use of the tools
+available to the language. A key advantage to using Lisp in particular is its
+focus on extensibility, and specifically its powerful macro system allows us to
+abstract away unnecessary details and write more generalised code. We discuss
+this in greater detail in Section~\ref{sec:implementation}.
 
 Our prediction market is written in the widely-used Common Lisp dialect of the
-Lisp family of programming languages, and in particular use the Steel Bank
-Common Lisp (SBCL) compiler and runtime environment to develop the code. Most
-importantly, Common Lisp is well-supported by Quicklisp, which provides the
-following packages that enable us to write the prediction market and web
-application:
+Lisp family of programming languages, and we use the Steel Bank Common Lisp
+(SBCL) compiler and runtime environment to develop the code. Most importantly,
+Common Lisp is well-supported by Quicklisp, which provides the following
+packages that enable us to write the prediction market:
 
 \begin{itemize}
 	\item Hunchentoot \cite{Hunchentoot}
@@ -242,23 +231,22 @@ application:
 	\item Smackjack \cite{Smackjack}
 \end{itemize}
 
-Hunchentoot provides the environment on which we host the server. It provides
-automatic session, allowing us to implement a login system, easy access of HTTP
-GET and POST parameters submitted via HTML forms, and a simple interface
-through which to define webpage handlers. To generate the webpages themselves
-we use CL-WHO, which translates Lisp expressions into HTML strings that we then
-pass to the appropriate Hunchentoot functions. The structure of a Lisp program
-maps well to that expected by an HTML file, while allowing us to dynamically
-generate pages through the use of macros, making Lisp a suitable choice for
-such a purpose.
+Hunchentoot provides the environment on which we host the server and provides
+automatic session handling, allowing us to implement a login system, easy
+access of HTTP GET and POST parameters submitted via HTML forms, and a simple
+interface through which to define webpage handlers. To generate the webpages
+themselves we use CL-WHO\footnote{Common Lisp With HTML Output.}, which
+translates Lisp expressions into HTML strings that we then pass to the
+appropriate Hunchentoot functions. The structure of a Lisp program maps well to
+that expected by an HTML file, while allowing us to dynamically generate pages
+through the use of macros, making Lisp a suitable choice for this purpose.
 
 Mito is an Object Relational Mapper (ORM) that provides an interface with which
-we can connect to and interact with a Relational Database Management System
-while remaining within the Lisp environment. We opt for a MySQL backend, simply
-due to its familiarity, though this choice is largely immaterial given our
-simple requirements. We can compose more complex MySQL statement using SXQL,
-and this integrates well with Mito so that the two are effectively used as one
-library.
+we can connect and interact with a Relational Database Management System from
+within the Lisp environment. We opt for a MySQL backend, simply due to its
+familiarity, though this choice is largely immaterial given our simple
+requirements. We can compose more complex MySQL statement using SXQL, and this
+integrates well with Mito so that the two are effectively used as one library.
 
 Parenscript allows us to incorporate Javascript into the site with the
 intention of improving user experience. Currently it is used as a means of

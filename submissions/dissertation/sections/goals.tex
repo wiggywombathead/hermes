@@ -22,30 +22,32 @@ market in which they themselves may hold a stake. Specifically, we seek to:
 \end{enumerate}
 
 These goals will largely be achieved by implementing the mechanism outlined by
-Freeman et al.~\cite{Freeman2017}, albeit wit several practical modifications.
+Freeman et al.~\cite{Freeman2017}, albeit with several practical modifications.
 The first three goals cover core functionality of any decentralised prediction
-market, while the fourth is concerned with the tuning of system parameters,
-before and during execution, in order to ensure that users do not manipulate
-the mechanism. In this users are not only discouraged from attempting to
-``game'' the system for personal gain, they are hurt for doing so.
+market, while the fourth is concerned with the tuning of system parameters, in
+order to ensure that users do not manipulate the mechanism. Thus users are
+not only discouraged from attempting to ``game'' the system for personal gain,
+and it is in their best interests to be truthful.
 
 Other non-essential features but highly desirable for strong user experience
 include asynchronous communication with the server in order to display
 up-to-date pricing information to the user without a page refresh, and the
 automated closing of markets. Both of these features would make the system
 straightforward and intuitive to use. Moreover, it would allow the system to
-run independently, meaning the market's functioning is only influenced by the
-community, one of the key points of implementing a decentralised market.
+run independently since we need not monitor and close markets by hand, meaning
+the market's functioning is only influenced by the community, one of the key
+points of implementing a decentralised market.
 
 As we will discuss in more detail in Section~\ref{sec:design}, one aspect of
 the mechanism is the assumption that the system knows the signal error rates
 when user's receive news about a market's outcome. This is unrealistic in
-practice, since we cannot hope to know the exact where each user learns about
-the outcome of the event nor the accuracy of said source's reporting. Hence we
-also look to implement a way in which users do not need to be explicitly asked
-their estimates of signal accuracy, and instead this is calculated based on
-their past reporting history. This leaves less opportunity to game the system,
-the entire point of implementing this prediction market mechanism.
+practice, since we have no way of knowing how users learn about the outcome of
+an event, nor the accuracy of this source's reporting (particularly important
+for highly subjective bets). Hence we also look to calculate an arbiter's
+average signal accuracy based on an their past reporting history, instead of
+having them estimate one each time they submit a report. This leaves less
+opportunity to game the system, the entire point of implementing this
+prediction market mechanism.
 
 \subsection{Stretch Features}
 
@@ -60,21 +62,19 @@ or sport.
 
 A useful feature to implement would be the tracking of price histories for each
 security. This would enable graphs to be generated so that users could be more
-informed on how the forecast of an event has changed over time. This would make
-the decision to participate at a particular price point more interesting on
-their part since they are not only estimating their belief on the probability
-that the event will have a positive outcome, but also on how the other users
-will act, similar to a real stock market.
+informed on how the forecast of an event has changed over time and would bring
+participation in the market more in line with what traders would experience in
+a real exchange.
 
 Finally, an issue with the mechanism of Freeman et al.\ as it stands is that it
 does not directly punish users for creating markets on ambiguous bets. Traders
-may become confused about the wording, leading to different interpretations and
-hence different users trading on different beliefs -- this is not useful for
-information aggregation. Although the negative effects are somewhat mitigated
-in that the very same community that trades in the security also decides on its
-outcome, there is no mechanism in place to specifically encourage clear bets.
-This is something that could be improved and would be useful in avoiding the
-market becoming swamped with overly subjective wagers.
+may become confused about the wording, leading to different interpretations of
+the security and could result in users trading on different assumptions -- this
+is not useful for information aggregation. Although the negative effects are
+somewhat mitigated in that the very same community that trades in the security
+also decides on its outcome, there is no system in place to specifically
+encourage clear bets. This is something that could be improved and would be
+useful in avoiding the market becoming swamped with overly subjective wagers.
 
 \subsection{Motivation}
 
@@ -109,17 +109,16 @@ It is therefore well justified to implement the decentralised peer prediction
 mechanism of Freeman et al. This not only allows users to create markets for
 any event they see fit, but also crowdsources market outcomes by relying on
 reports from the community. Thus instead of relying on a single source of
-information, which leaves it vulnerable to reporting biases particularly for
-more ambiguous or subjective bets, it gets a more complete picture of how the
-users themselves, who are the ones interacting with the market, observed the
-outcome. This can average out the biases present in any one news source. This
-also seems to be a better method to deal with ambiguity than in \emph{Augur},
-since the outcome of the market can be influenced by a reporter's
-interpretation of a wager. Another issue with \emph{Augur} is that it has not
-been shown to achieve any theoretical guarantees, which should be a key
+information, which leaves it vulnerable to reporting biases, it gets a more
+complete picture of how the users themselves, the ones interacting with the
+market, observed the outcome. This can average out the biases present in any
+one news source. This also seems to be a better method to deal with ambiguity
+than in \emph{Augur}, since the outcome of the market can be influenced by a
+reporter's interpretation of a wager. Another issue is that \emph{Augur} has
+not been shown to achieve any theoretical guarantees, which should be a key
 consideration in an environment in which rational selfish agents are
-interacting. Instead, the market we implement is proven to be incentive
-compatible, meaning it it in a user's best interests to report market outcomes
-truthfully and not attempt to manipulate it for their own gain. Although the
+interacting. This provides a good opportunity to apply a game-theoretic
+approach, and the market we implement is incentive compatible, meaning it it in
+a user's best interests to report market outcomes truthfully. Although the
 mechanism is not budget balanced, it can be fully subsidised by a trading fee
 on each transaction, further making it practical and self-sufficient.

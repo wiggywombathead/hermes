@@ -3,8 +3,7 @@
 \label{sec:implementation}
 
 In this section we shall detail our implementation of the trading and peer
-prediction mechanism. The system consists of five independent parts, each
-responsible for a separate area of functionality. These are as follows:
+prediction mechanism. The system consists of five independent parts:
 
 \begin{enumerate}
 	\item Database
@@ -19,12 +18,6 @@ responsible for a separate area of functionality. These are as follows:
 \label{sec:database}
 
 \subsubsection{Table Definitions}
-
-The database is responsible for persistent storage. It is implemented using the
-Mito library provided by Quicklisp, which is an object relational mapper that
-provides support for MySQL, PostgreSQL, and SQLite3. This allows us to define
-and interact with the database tables while remaining within the Lisp
-ecosystem, leading to a quicker and more flexible development cycle.
 
 We define three tables that handle all interactions with the database:
 \code{USER}, which stores all users in the system and their remaining budget;
@@ -60,48 +53,46 @@ deadline has passed. The table definitions are as follows:
 An entry in the \code{USER} table consists of a username and a budget. All
 users currently start with \$100, which is of no real consequence since the
 market uses play-money. Currently there is no requirement to supply a password
-when logging; this has been done to speed up the testing process, and if
+when logging in; this has been done to speed up the testing process, and if
 required in the future this will be a simple addition to make.
 
 Securities are also simple entities to store, whose fields fully describe a
 market: \emph{bet} stores a string that specifies the wager being made;
 \emph{shares} stores the total number of shares (referred to as $q$ in
 Section~\ref{sec:tradingMechanisms}); \emph{deadline} holds the date and time
-by which the event's outcome will have been realised; and \emph{outcome} is
-initially null and eventually set to the payout price per share, or the
-fraction of arbiters reporting a positive outcome, once the deadline has
-passed.
+by which trading is to stop; and \emph{outcome} is initially null and
+eventually set to the payout price per share, or the fraction of arbiters
+reporting a positive outcome, once the deadline has passed.
 
-The \code{USER-SECURITY} table is used to represent the mapping between users
-and securities, and is used to store a user's position in a given market as
-well as the outcome they have reported on its outcome, if they are indeed an
-arbiter for it. The columns are as follows: \emph{user} holds a reference to an
-entry in the \code{USER} table; \emph{security} holds a reference to an entry
-in the \code{SECURITY} table; \emph{shares} stores the user's position in this
-market if they have one, otherwise 0; \emph{report} stores the user's report on
-the outcome, if they are an arbiter for this security; and \emph{positive
-belief} and \emph{negative belief} represent how reliable a user's signals are,
-based on their previous reporting history. The manner in which we use the last
-two fields will be discussed in greater depth in Section~\ref{sec:arbitration}.
+The \code{USER-SECURITY} table represents the many-to-many mapping between
+users and securities, and is used to store a user's position in a given market
+as well as the outcome they have reported for it, if they have acted as an
+arbiter. The columns are as follows: \emph{user} holds a reference to an entry
+in the \code{USER} table; \emph{security} holds a reference to an entry in the
+\code{SECURITY} table; \emph{shares} stores the user's position in this market
+if they have one, otherwise 0; \emph{report} stores the user's report on the
+outcome, if they are an arbiter for this security; and \emph{positive belief}
+and \emph{negative belief} represent how reliable a user's signals are, based
+on their previous reporting history. The manner in which we use the last two
+fields will be discussed in greater depth in Section~\ref{sec:arbitration}.
 
 \subsubsection{Database Interface}
 
 We provide the interface with which we interact with the database in
-\code{database.lisp}. We first initialise the database by connecting to our
-choice of backend and then define the tables as in the previous section. We opt
-to use MySQL as the backend simply as it was already installed on the
-development machine, as well as some prior familiarity with the language.
-Tables are then created using the \code{deftable} macro supplied by Mito:
-syntactically, this is similar to vanilla Common Lisp's \code{defstruct} macro.
-Listing~\ref{lst:deftable} shows how we define the columns and their associated
-datatypes. The macro defines the default accessors\footnote{Functions for
-accessing members of a struct.}, the slots \code{created\_at} and
-\code{updated\_at}, and a primary key \code{id} if none is specified. As the
-listing shows, we can specify a previously defined table as the column
-datatype, in this case \code{user} and \code{security}, in order to model the
-foreign key relation in a straightforward manner. 
+\code{database.lisp}. We first initialise the database and connect to it, and
+then define the tables as in the previous section. We opt to use MySQL as the
+backend simply as it was already installed on the development machine, as well
+as some prior familiarity with the language.  Tables are then created using the
+\code{deftable} macro supplied by Mito: syntactically, this is similar to
+vanilla Common Lisp's \code{defstruct} macro.  Listing~\ref{lst:deftable} shows
+how we define the columns and their associated datatypes. The macro defines the
+default accessors\footnote{Functions for accessing members of a struct.}, the
+slots \code{created\_at} and \code{updated\_at}, and a primary key \code{id} if
+none is specified. As the listing shows, we can specify a previously defined
+table as the column datatype, in this case \code{user} and \code{security}, in
+order to model the foreign key relation in a straightforward manner. 
 
-\begin{lstlisting}[
+\begin{lstlisting}[float,
 	label={lst:deftable},
 	caption={Defining the \code{USER-SECURITY} table in Mito}]
 (deftable user-security ()
@@ -130,7 +121,7 @@ securities whose deadline is yet to pass, in order of first to last to expire.
 We use the SXQL functions \code{where}, \code{:>}, \code{order-by}, and
 \code{:asc} that expand into the corresponding MySQL code for Mito to execute.
 
-\begin{lstlisting}[
+\begin{lstlisting}[float,
 	label={lst:retrieveExpiring},
 	caption={Retrieving active markets using Mito and SXQL}]
 (defun get-expiring-securities (datetime)
@@ -144,7 +135,7 @@ We use the SXQL functions \code{where}, \code{:>}, \code{order-by}, and
 For any interaction with the database, we need to establish a connection prior
 to the transaction and disconnect after it is complete. This gives us the
 opportunity to make use of Lisp's macro system: while it is a small example,
-since its use is so widespread it drastically reduces the number of lines and
+since its use is so widespread it greatly reduces the number of lines and
 ensures we never forget to close a database connection. We define our macro
 \code{with-open-database} as in Listing~\ref{lst:databaseMacro}. Since the
 final statement in a function or macro definition in Lisp is the value returned
@@ -152,7 +143,7 @@ by that block, we are able to open the connection, execute arbitrary code and
 store the final result in the variable \code{result}, then disconnect from the
 database and return the result of the transaction.
 
-\begin{lstlisting}[
+\begin{lstlisting}[float,
 	label={lst:databaseMacro},
 	caption={Defining our \code{with-open-database} macro}]
 (defmacro with-open-database (&body code)
@@ -166,10 +157,9 @@ database and return the result of the transaction.
 
 In order to enable the transactions in the following sections, when we first
 initialise the database we create a user with the name ``bank''. All money that
-is then to be collected from or paid out to users is done so through the bank,
+is then to be collected from or paid out to users is done so through this user,
 so that money is largely conserved. Although not so important for a play-money
-market, it does help to enforce a value on the currency we use as well as
-analyse the system's performance.
+market, it does help for accounting purposes.
 
 \subsection{Trading}
 
@@ -182,13 +172,12 @@ arbitration stage, to ensure arbiters are incentivised to report truthfully.
 These features are implemented in the files \code{msr.lisp} and
 \code{market.lisp}.
 
-As discussed in Section~\ref{sec:tradingMechanisms}, we will be implementing
-our automated market maker using a scoring rule market. In order to achieve the
-guarantees of Freeman, Lahaie, and Pennock's mechanism we must use a scoring
-rule that is strictly proper, which can then be implemented as a market maker
-based on a convex cost function. We use the commonly-used Logarithmic Market
-Scoring Rule (LMSR) created by Robin Hanson~\cite{Hanson2007}, whose cost
-function is defined as follows:
+We implement our automated market maker using a scoring rule market.  In order
+to achieve the guarantees of Freeman, Lahaie, and Pennock's mechanism we must
+use a scoring rule that is strictly proper, which can then be implemented as a
+market maker based on a convex cost function. We use the commonly-used
+Logarithmic Market Scoring Rule (LMSR) created by Robin
+Hanson~\cite{Hanson2007}, whose cost function is defined as follows:
 %
 \begin{equation}
 	\label{eq:LMSR}
@@ -215,11 +204,12 @@ the responsiveness of $C$. A lower value of $b$ corresponds to a more sensitive
 share price, meaning the price will change more quickly for smaller
 transactions. It also controls the market's risk of loss: for markets with
 $|\Omega|$ outcomes it can be shown that the maximum loss incurred by the
-market maker is $b \log |\Omega|$. Recall that to compute the actual cost to
-charge an agent for a transaction, we compute $C_b(q')-C_b(q)$ for an agent
-wishing to take the total quantity of shares from $q$ to $q'$, and this also
-encodes sell transactions. The share price function is the derivative of the
-cost function, which is in our case:
+market maker is $b \log |\Omega|$. In our case, each market will lose at most
+$b \log 2$. Recall that to compute the actual cost to charge an agent for a
+transaction, we compute $C_b(q')-C_b(q)$ for an agent wishing to take the total
+quantity of shares from $q$ to $q'$, and this also encodes sell transactions.
+The share price function is the derivative of the cost function, which is in
+our case:
 %
 \begin{equation}
 	\label{eq:LMSRprice}
@@ -236,15 +226,13 @@ outcome, and appropriately $p_b(0)=\$0.50$ for any $b$. Meanwhile, for $q=20$
 and $b=10$ this means twenty more shares have been bought than sold in the
 market and would yield a quoted share price of $p_{10}(20) \approx \$0.88$.
 Users feel more confident that the event will be positive, thus pushing the
-price upwards. This could assure some agent that the event will have a positive
-outcome. Suppose they wish to buy ten more shares in the market: they would
-then be required to pay $C_{10}(30)-C_{10}(20)=10 \log (\frac{1+e^3}{1+e^2})
-\approx \$9.22$. Such an action in the market would push the share price to
-$p(30) \approx \$0.95$. Users may also be required to pay a fee on their
-transaction, in order to subsidise the arbitration stage.
-Figure~\ref{fig:marketCreation} shows the interface for creating a new market,
-while Figure~\ref{fig:transactionSummary} shows an example of the transaction
-summary that a user is presented with after having done so.
+price upwards. Suppose that upon seeing this price increase, an agent wishes to
+buy ten more shares in the market: they would then be required to pay
+$C_{10}(30)-C_{10}(20)=10 \log (\frac{1+e^3}{1+e^2}) \approx \$9.22$. Such an
+action in the market would push the share price to $p(30) \approx \$0.95$, plus
+any fees. Figure~\ref{fig:marketCreation} shows the interface for creating a
+new market, while Figure~\ref{fig:transactionSummary} shows an example of the
+transaction summary that a user is presented with after having done so.
 
 \begin{figure}[h]
 	\centering
@@ -262,28 +250,38 @@ summary that a user is presented with after having done so.
 \end{figure}
 
 Fees are only charged on transactions where an agent increases their risk: this
-means they are either buying or selling a greater number of shares than their
-current position. For example, a user owning ten shares and selling five would
-incur no extra cost since they are liquidating a position they have already
-invested in, while selling more than ten or buying additional shares would
-incur an additional cost. The fee serves a secondary purpose in bounding the
-price of the security away from \$0 and \$1, as a potential trader would be
-spending more than \$1 or less than \$0 to buy or sell the shares. For example,
-even if an agent were to buy an infinitesimal number of shares, meaning their
+means they are buying or selling a greater number of shares than their current
+position. For example, a user owning ten shares and selling five would incur no
+extra cost since they are liquidating a position they have already invested in,
+while selling more than ten or buying additional shares would incur an
+additional cost. The fee serves a secondary purpose in bounding the price of
+the security away from \$0 and \$1, as a potential trader would be spending
+more than \$1 or less than \$0 to buy or sell the shares. For example, even if
+an agent were to buy an infinitesimal number of shares, meaning their
 transaction cost would be given by the share price function $p$, if the share
 price was \$0.99 and the transaction fee was set to 5\%, they would be required
 to pay $\$0.99 \cdot 1.05 = 1.0395$, greater than the maximum possible payout.
-In our market we implement a fixed trading fee of 5\% on all risk transactions.
+This allows us to bound the total number of securities that will exist for a
+given market, and hence its maximum payout.  In our market we implement a fixed
+trading fee of 5\% on all risk transactions.
 
 Obviously, we need to take into account a trader's budget when they are looking
 to make a transaction and if they cannot afford one, deny them the trade. This
-is simple for buy transactions, where their budget must exceed the cost. For a
-short sell, we need to ensure that the user will be able to cover the expense
-of buying back the shares in the worst case -- that is, the event occurs and
-they are required to buy back their position at \$1 per share. Hence our
-function, \code{sufficient-funds?}, ensures a user can only go short on a
-security if their budget plus the amount they are paid for selling is larger
-than the number of shares they are shorting.
+is simple for buy transactions, where the cost must not exceed their budget.
+For a short sell, we need to ensure that the user will be able to cover the
+expense of buying back the shares in the worst case -- that is, the event
+occurs and they are required to buy back their position at \$1 per share. Hence
+the function, \code{sufficient-funds?}, ensures a user can only go short on a
+security if their budget plus the amount they are paid for shorting is larger
+than the size of their short position.
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=\textwidth]{trade}
+	\caption{User's can trade in active markets or report on those that have
+	expired}
+	\label{fig:trade}
+\end{figure}
 
 \subsection{Arbitration}
 
@@ -297,18 +295,11 @@ Since the mechanism incentivises arbiters to act truthfully even if an arbiter
 themselves holds a stake in the market, we decide to let anyone opt in to
 reporting on the outcome. Once a market's deadline has passed the security will
 be listed as an expired market and the user is presented with the option to act
-as an arbiter, as in Figure~\ref{fig:expiredMarket}. After doing so, they may
-then input their observed signal, or indeed a lie, as
-Figure~\ref{fig:reportOutcome} shows.  Once the required number of reports have
+as an arbiter, as in Figure~\ref{fig:trade} under ``Unresolved Markets''. After
+doing so, they may then input their observed signal, or indeed a lie, as
+Figure~\ref{fig:reportOutcome} shows. Once the required number of reports have
 been collected, we move onto rewarding arbiters for submitting reports and
 computing the final outcome of the market.
-
-\begin{figure}[h]
-	\centering
-	\includegraphics[width=\textwidth]{expired-market}
-	\caption{Users may opt in to report on market outcomes}
-	\label{fig:expiredMarket}
-\end{figure}
 
 \begin{figure}[h]
 	\centering
@@ -317,16 +308,23 @@ computing the final outcome of the market.
 	\label{fig:reportOutcome}
 \end{figure}
 
+%\begin{figure}[h]
+%	\centering
+%	\includegraphics[width=\textwidth]{expired-market}
+%	\caption{Users may opt in to report on market outcomes}
+%	\label{fig:expiredMarket}
+%\end{figure}
+
 Arbiters are rewarded by being paid a certain amount of money only if their
-report agrees with another randomly chosen arbiter. The reward is determined by
-the 1/prior-with-midpoint mechanism, where instead of using the common
-prior probability $\mu$ we use the update probabilities $\mu_1$ and $\mu_0$.
-Recall that these are the probability that, given that arbiter $i$ receives a
-positive signal so too does another randomly chosen arbiter $j$, and the
-probability that, given that $i$ receives a negative signal, another randomly
-chosen arbiter $j$ receives a positive signal. Since we cannot assume arbiters
-to act truthfully, this is more complicated than simply counting the types of
-reports received. Instead, we use information about signal error rates
+report agrees with that of another randomly chosen arbiter. The reward is
+determined by the 1/prior-with-midpoint mechanism, where instead of using the
+common prior probability $\mu$ we use the update probabilities $\mu_1$ and
+$\mu_0$. Recall that these are the probability that, given that arbiter $i$
+receives a positive signal, so too does another randomly chosen arbiter $j$,
+and the probability that, given that $i$ receives a negative signal, another
+randomly chosen arbiter $j$ receives a positive signal. Since we cannot assume
+arbiters to act truthfully, this is more complicated than simply counting the
+types of reports received. Instead, we use information about signal error rates
 $Pr[x_i=1|X=1]$ and $Pr[x_i=1|X=0]$ based on past market outcomes and past
 reporting behaviour for each arbiter $i$. This is a fairly involved process:
 first we gather all securities that have been reported on in the past by $i$
@@ -336,9 +334,9 @@ as its outcome, and push this into a list of results. At the end of this stage
 we have a list \code{((security report outcome) ...)} that describes the
 arbiter's report and the market's true (peer-determined) outcome for each
 security for which they have acted as an arbiter. The code implementing this is
-show in Listing~\ref{lst:reportingHistory}.
+shown in Listing~\ref{lst:reportingHistory}.
 
-\begin{lstlisting}[
+\begin{lstlisting}[float,
 	label={lst:reportingHistory},
 	caption={Gathering a user's reporting history}]
 (defun get-securities-reported-by-user (user)
@@ -369,9 +367,9 @@ We then use this history to compute the probability that, assuming the arbiter
 has always acted truthfully, their signal has been correct in telling them the
 true outcome of the event. We refer to these probabilities, $Pr[x_i=1|X=1]$ and
 $Pr[x_i=1|X=0]$, as a arbiter $i$'s positive and negative signal beliefs as a
-remnant of a previous implement. Listing~\ref{lst:positiveBelief} shows how we
-calculate an arbiter's positive belief, with a similar method applying for
-computing the negative belief: for the arbiter's history restricted to the
+remnant of a previous implementation. Listing~\ref{lst:positiveBelief} shows
+how we calculate an arbiter's positive belief, with a similar method applying
+for computing the negative belief: for the arbiter's history restricted to the
 securities whose outcome was reported as positive by the majority of arbiters,
 we count the number of times this arbiter also reported a positive outcome,
 thus giving us the arbiter's signal error probability given we know the outcome
@@ -384,7 +382,7 @@ positive report. Again we assume in the lack of markets with negative outcomes
 that the arbiter has a perfect signal. We repeat this to compute the positive
 and negative signal beliefs for each arbiter.
 
-\begin{lstlisting}[
+\begin{lstlisting}[float,
 	label={lst:positiveBelief},
 	caption={Computing an arbiter's positive signal belief given
 	their reporting history}]
@@ -405,7 +403,7 @@ and negative signal beliefs for each arbiter.
 We use this information about the reliability of each arbiter's signal, along
 with the prior probability $\mu$ that the event had a positive outcome, to
 compute the update probabilities $\mu_1$ and $\mu_0$, used in the
-1/prior-with-midpoint mechanism. We use these to compute the update
+1/prior-with-midpoint mechanism. We first compute the update
 probabilities $\mu_1^i$ for each arbiter $i$, using a randomly chosen peer
 arbiter $j$, as follows:
 %
@@ -436,13 +434,11 @@ report and their beliefs, giving us \code{report[i] = report} and
 market's outcome is simply set to the proportion of arbiters that reported a
 positive outcome. At this point we pay out the appropriate winnings to
 stakeholders, paying out money to those who hold shares and demanding money
-from those who have gone short. The former group are looking to be paid out at
-a price higher than the level at which they bought the shares, while the latter
-are hoping to buy back their shares at a lower level than their ``in'' price.
-Now that the market's outcome has been determined it will no longer be listed
-as an unresolved market on the user's dashboard.
+from those who have gone short. Now that the market's outcome has been
+determined it will no longer be listed as an unresolved market on the user's
+dashboard.
 
-\begin{lstlisting}[
+\begin{lstlisting}[float,
 	label={lst:marketOutcome},
 	caption={Computing the market outcome}]
 (let ((reports (mapcar #'second arbiter-reports)))
@@ -456,7 +452,7 @@ algorithm~\cite[pg.~26-27]{FisherYates1938} ourselves as the \code{shuffle}
 function in Listing~\ref{lst:randomPairing}. The random pairing is then formed
 by walking through the shuffled list and collecting adjacent elements as pairs.
 
-\begin{lstlisting}[
+\begin{lstlisting}[float,
 	label={lst:randomPairing},
 	caption={Assigning arbiters to peers randomly}]
 (defun shuffle (lst)
@@ -480,7 +476,7 @@ values of $\mu_1^i$ and $\mu_0^i$ according to
 Equation~\ref{eq:updateProbabilities}, where the randomly chosen $j$ is simply
 the partner with whom they have been paired. We push these values to a list so
 we may then compute the minimum value of $\mu_1^i$ and maximum value of
-$\mu_0^i$ across all arbiters. Finally to compute the smallest $k$ to satisfy
+$\mu_0^i$ across all arbiters. Finally, to compute the smallest $k$ to satisfy
 Equation~\ref{eq:kBoundN} we set $k = \max_i 2|n_i|/m\delta$, and use this to
 pay arbiters according to Equation~\ref{eq:oneOverPrior}.
 
@@ -498,17 +494,16 @@ choosing to accept requests. Doing so also initialises the dispatch table,
 which is a list containing the functions to execute when the corresponding
 webpage is loaded. We can specify webpages to the dispatch table by using
 Hunchentoot's \code{create-prefix-dispatcher} function: this simply takes a URL
-and the function to execute when that URL is loaded. Here is again the
-opportunity to make use of Lisp's macro system: the code in
-Listing~\ref{lst:defineURL} shows a macro that defines a function and a URL of
-the same name, creates a dispatcher from them and pushes it to the dispatch
-table. This again not only saves rewriting repetitive code but also keeps the
-codebase clear and logical -- the URL \code{/index} is served by a function
-called \code{index}. Now each time we wish to define a new webpage we need only
-to call \code{define-url-fn} followed by the name of the page and the
-instructions to execute.
+and the function to execute when that URL is loaded. Again the opportunity to
+use Lisp's macro system arises: the code in Listing~\ref{lst:defineURL} shows a
+macro that defines a function and a URL of the same name, creates a dispatcher
+for them and pushes it to the dispatch table. This again not only saves
+rewriting repetitive code but also keeps the codebase clear -- for example, the
+URL \code{/index} is served by a function called \code{index}. Now each time we
+wish to define a new webpage we need only to call \code{define-url-fn} followed
+by the name of the page and the code to execute.
 
-\begin{lstlisting}[
+\begin{lstlisting}[float,
 	label={lst:defineURL},
 	caption={Macroising URL functions}]
 (defmacro define-url-fn ((name) &body body)
@@ -524,18 +519,15 @@ instructions to execute.
            *dispatch-table*)))
 \end{lstlisting}
 
-To define the content of the webpages we use CL-WHO\footnote{Common Lisp With
-HTML Output.}, translates Lisp statements into strings of valid HTML. Since we
-are aiming for a uniform style across all webpages -- for example, with a
-consistent navigation bar, a content section, and all the same preamble -- this
-is another opportunity to make use of Lisp's macro system, to avoid code
-duplication and improve the abstraction to the code. In this vein we define the
-\code{standard-page} macro, an abridged version of which is given in
-Listing~\ref{lst:standardPage}. This allows us to concisely define webpages
-with a similar look and feel in a concise manner, and only requires us to
-specify the content that makes the page unique via the \code{body} parameter.
+We use CL-WHO to define the content of the webpages, which translates Lisp
+statements into strings of HTML. In order to achieve a consistent style while
+avoiding code duplication we define a macro describing a ``standard page'', an
+abridged version of which is given in Listing~\ref{lst:standardPage}. This
+allows us to concisely define webpages with a similar look and feel, and only
+requires us to specify the content that makes the page unique via the
+\code{body} parameter.
 
-\begin{lstlisting}[
+\begin{lstlisting}[float,
 	label={lst:standardPage},
 	caption={Macroising webpage definitions}]
 (defmacro standard-page ((&key title) &body body)
@@ -557,16 +549,14 @@ specify the content that makes the page unique via the \code{body} parameter.
 \end{lstlisting}
 
 Hunchentoot also automatically provides session handling -- this is obviously
-vital for writing a web application such as ours to allow multiple users to be
-logged on at the same time and present to them the appropriate information.
-All we need to do is define the symbol \code{session-user} in the data
-structure for session handling, then when a user logs in we set this value to
-the matching user retrieved from the database with \code{(session-value
-'session-user)}. This allows us to display consistent user information across
-different webpages within the same session, such as the user's budget or their
-portfolio of securities. Finally, most user interaction is achieved through the
-use of forms, allowing the user to log in, trade shares, and report outcomes,
-so we need a means of accessing this information. Hunchentoot provides the
+important for allowing multiple users to be logged on at the same time and
+presenting the appropriate information to them. All we need to do is define the
+symbol \code{session-user} in the data structure for session handling, then
+when a user logs in we set this value to the matching user retrieved from the
+database with \code{(session-value 'session-user)}. This allows us to display
+consistent user information across different webpages within the same session,
+such as the user's budget or their portfolio of securities. Finally, users
+mostly interact with the market through forms: Hunchentoot provides the
 \code{get-parameter}, \code{post-parameter}, and \code{parameter} functions to
 retrieve the values these forms send to and from the different webpages.
 
@@ -579,36 +569,35 @@ retrieve the values these forms send to and from the different webpages.
 
 In Sections~\ref{sec:database}, \ref{sec:trading}, \ref{sec:arbitration}, and
 \ref{sec:server} we have detailed the manner in which we achieve the goals laid
-out in \ref{enm:goals} which implement the core features of any prediction
-market, as well as the specific behaviour making the peer prediction mechanism
-of Freeman et al.\ unique. In this section we shall detail the approach we take
-to making our prediction market more user-friendly and intuitive to use.
+out in Section~\ref{enm:goals} which implement the core features of any
+prediction market, as well as the behaviour that makes the peer prediction
+mechanism of Freeman et al.\ unique. In this section we shall detail the how we
+make our prediction market more user-friendly and intuitive to use.
 
-The most important aspect behind making the web application is the
-integration of asynchronous server communications, meaning the possibility of
-displaying up-to-date information to the user without a page refresh, as well
-as triggering certain events to occur at a given time. For this we use the
-Quicklisp libraries Parenscript coupled with Smackjack to translate Lisp code
-to Javascript and allow us to communicate asynchronously with the server. We
-first use Parenscript for form validation on the client-side, and in particular
-to ensure that all required form fields are completed without needing to send
-the entire form to the server. Parenscript provides the function
-\code{ps-inline}, which allows us to insert Lisp code, that will be converted
-to a valid Javascript program, anywhere. Therefore on every form we wish to
-validate prior to sending its contents to the server, we can insert Javascript
-code as the \code{:onsubmit} attribute of the form, for example \code{(form
-:action "create-market" :method :POST :onsubmit (ps-inline ...)}. The way in
-which we implement this validation in a concise manner is again through the use
-of Lisp's macro system: Listing~\ref{lst:nonEmptyMacro} shows the three
-functions we define to dynamically check for completed fields. The function
-\code{make-nonempty-check} simply writes Lisp code that, by the time it is
-called within \code{ps-inline} will expand to the Javascript statement
-\code{field.value == 0}. The function \code{make-nonempty-list} allows us to
-simply specify a list of fields that we require to be non-empty and have it
-generate a collection of non-empty checks. Finally the macro
-\code{nonempty-fields} calls the previous function and splices it from a list
-to successive arguments to the \code{or} function. This is all wrapped within a
-call to \code{ps-inline}, yielding something similar to:
+The most important aspect behind making the web application responsive is the
+integration of asynchronous server communications so that we can display
+up-to-date information to the user without a page refresh, as well as trigger
+markets to close trading at the correct time. For this we use the Quicklisp
+libraries Parenscript coupled with Smackjack to translate Lisp code to
+Javascript and allow us to communicate asynchronously with the server. We first
+use Parenscript for form validation on the client-side, and in particular to
+ensure that all required form fields are completed without needing to send the
+entire form to the server, only for it to potentially be incomplete.
+Parenscript provides the function \code{ps-inline}, which allows us to insert
+Lisp code, that will be converted to a valid Javascript program, within the
+CL-WHO defined pages. We can therefore validate forms before being sent to the
+server with \code{(form :action "create-market" :method :POST :onsubmit
+(ps-inline ...))}. We implement form validation using a macro:
+Listing~\ref{lst:nonEmptyMacro} shows the three functions we define to
+dynamically check for completed fields. The function \code{make-nonempty-check}
+simply writes Lisp code that, by the time it is called within \code{ps-inline}
+will expand to the Javascript statement \code{field.value == 0}. The function
+\code{make-nonempty-list} allows us to simply specify a list of fields that we
+require to be non-empty and have it generate a collection of non-empty checks.
+Finally the macro \code{nonempty-fields} calls the previous function and
+splices it from a list to successive arguments to the \code{or} function. This
+is all wrapped within a call to \code{ps-inline}, yielding something similar
+to:
 
 \begin{lstlisting}[
 	label={},
@@ -619,7 +608,7 @@ if (a.value == "" || b.value == "" || ... ) {
 }
 \end{lstlisting}
 
-\begin{lstlisting}[
+\begin{lstlisting}[float,
 	label={lst:nonEmptyMacro},
 	caption={Macro for ensuring all required fields are complete}]
 (defun make-nonempty-check (field)
@@ -638,11 +627,10 @@ if (a.value == "" || b.value == "" || ... ) {
        (return false))))
 \end{lstlisting}
 
-We next turn our attention to implementing AJAX using the Smackjack library
-from Quicklisp, in conjunction with Parenscript. Similarly to how he defined
-functions to execute when we load a specific URL in Section~\ref{sec:server},
-we must also push our various AJAX functions to the dispatch table: Hunchentoot
-provides a special data structure, similar in function to the
+We use the Smackjack library in conjunction with Parenscript to implement AJAX.
+Similarly to how he defined functions to execute when we load a specific URL in
+Section~\ref{sec:server}, we must also push our various AJAX functions to the
+dispatch table: Hunchentoot provides a special data structure, similar to the
 \code{easy-acceptor}, that handles all asynchronous calls in the form of the
 \code{ajax-processor}. We then create an AJAX dispatcher from this and push it
 to the dispatch table as before: 
@@ -654,31 +642,31 @@ to the dispatch table as before:
 (push (create-ajax-dispatcher *ajax-processor*) *dispatch-table*)
 \end{lstlisting}
 
-We then define all of our AJAX functions using the Smackjack macro
+We define all of our AJAX functions using the Smackjack macro
 \code{defun-ajax}. This allows us to write functions in Lisp which perform some
-computation on the server side and send a response back to the client in some
-format. These function definitions are the same as any other in Lisp, with
-additional information to specify the AJAX processor associated with it, the
-method by which the data will be sent to the client, and the format that the
-client should expect it in. We use only one processor, \code{*ajax-processor*}
-which is initialised when the server starts, and we choose to send all data via
-an HTTP POST request as a JSON string.
+computation on the server side and send a response back to the client
+asynchronously. These function definitions are the same as any other in Lisp,
+with additional information to specify the AJAX processor associated with it,
+the method by which the data will be sent to the client, and the format that
+the client should expect it in. We use only one processor,
+\code{*ajax-processor*}, which is initialised when the server starts, and we
+send all data via an HTTP POST request as a JSON string.
 
 One manner in which we use this asynchronous communication is to quote a
-projected cost of a transaction to a user looking to trade. Since we cannot use
-the price function $p$ to do this, as we require the number of shares a user is
-looking to buy or sell in order to calculate $C_b(q')-C_b(q)$, we implement the
-write the cost function as an AJAX function that takes the user's desired
-quantity of shares and the current total number of shares to quote a price to
-them. The interface we present to the user restricts them to entering positive
-quantities only and checking a radio button to specify whether to buy or sell
-(to avoid confusion of needing to enter a negative number to sell), hence we
+projected cost of a transaction to a user looking to trade. Since we require
+the number of shares a trader is looking to buy or sell in order to quote
+$C_b(q')-C_b(q)$, and we wish to do this without a page refresh, we implement
+the write the cost function as an AJAX function that takes the user's desired
+quantity of shares and the current total number of shares in the security to
+quote the cost. The interface we present to the user restricts them to entering
+positive quantities only and checking a button to specify whether to buy or
+sell (since entering a negative number to sell could be confusing), hence we
 also need the value of this radio button to compute the transaction cost. This
 function is given in Listing~\ref{lst:ajaxTransactionCost}. The function is now
 defined within Smackjack's namespace: next we need to define the function that
 calls it asynchronously in Javascript.
 
-\begin{lstlisting}[
+\begin{lstlisting}[float,
 	label={lst:ajaxTransactionCost},
 	caption={Defining an AJAX function for computing transaction cost using
 	Smackjack}]
@@ -706,18 +694,17 @@ Listing~\ref{lst:javascriptTransactionCost}. This function is responsible for
 getting the quantity of shares the user has input, the current outstanding
 quantity of shares, and which radio button has been checked to specify whether
 they are buying or selling. This is achieved by the Parenscript macro
-\code{chain}, which chains the list of arguments following it into a chain of
-function calls and attribute retrievals. Note that the two radio buttons
-specifying whether to buy or sell must necessarily have the same \code{id} and
-\code{name} field within the form, hence we cannot simply call
+\code{chain}, which chains the list of arguments following it into a list of
+function calls and attribute retrievals as required. Note that the two radio
+buttons specifying whether to buy or sell must necessarily have the same
+\code{id} and \code{name} field within the form, hence we cannot simply call
 \code{get-element-by-id} to retrieve the value. Instead, we call
 \code{get-element-by-names} to return both, then iterate through them to verify
 which one was checked. We then call the AJAX function we defined earlier from
 Smackjack, \code{ajax-transaction-cost-quantity}, to compute the transaction
 cost. This then triggers the callback function \code{display-projected-cost},
-which is responsible for actually modifying the value in the appropriate table
-cell. Listing~\ref{lst:javascriptTransactionCost} reflects the rest of this
-process.
+which actually updates the value in the appropriate table cell asynchronously.
+Listing~\ref{lst:javascriptTransactionCost} reflects the rest of this process.
 
 \begin{figure}[htp]
 	\subfloat[]{%
@@ -730,7 +717,7 @@ process.
 	\caption{Updating transaction costs asynchronously}
 \end{figure}
 
-\begin{lstlisting}[
+\begin{lstlisting}[float,
 	label={lst:javascriptTransactionCost},
 	caption={Calling the AJAX function asynchronously}]
 (ps
@@ -757,18 +744,19 @@ process.
 						 display-projected-cost)))))
 \end{lstlisting}
 
-Finally, we use AJAX to automatically cease trading when a market's deadline
+Finally, we use AJAX to automatically close trading when a market's deadline
 has passed. We first define a Smackjack function that retrieves the most
 imminently expiring security, then compute the difference in seconds between
 the current time and its deadline. A JSON object is then returned containing
-this value, which we will use to set a timer for the page to reload. We next
-define the Javsacript function \code{set-timer} which takes this JSON object
-and sets the page to reload after this interval. This process is detailed in
+this value, which we use to set a timer for the page to reload. We next define
+the Javsacript function \code{set-timer} which takes this JSON object and sets
+the page to reload after this interval. This process is given in
 Listing~\ref{lst:setTimer}. This prevents user from trading shares after
-potentially knowing of the outcome, and instead reloads the page and lists the
-market as ``unresolved'' and no longer ``active''.
+potentially knowing the outcome, and instead reloads the page and lists the
+market under ``Unresolved Markets'' and no longer active (see
+Figure~\ref{fig:trade}).
 
-\begin{lstlisting}[
+\begin{lstlisting}[float,
 	label={lst:setTimer},
 	caption={Triggering the close of trading automatically}]
 (defun-ajax ajax-set-timer ()

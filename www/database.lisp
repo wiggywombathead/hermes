@@ -384,10 +384,10 @@
 		reports)
 	(dolist (arbiter arbiters)
 	  (with-open-database
-		(let ((report (parse-integer (user-security-report
-									   (find-dao 'user-security
-												 :user arbiter
-												 :security security)))))
+		(let ((report (user-security-report
+						(find-dao 'user-security
+								  :user arbiter
+								  :security security))))
 		  (push (list arbiter report) reports))))
 	reports))
 

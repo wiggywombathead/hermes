@@ -12,14 +12,14 @@ project as a whole.
 One obvious success of the project is that we have implemented the
 decentralised prediction market that we originally intended based on the work
 of Freeman et al. A key component of the market is that participants are
-incentivised to act in the desired way through paying each user a deliberate
-and calculated amount of money. This has required building a strong
-understanding of their paper to ensure everything has been implemented
-correctly so that we may achieve the theoretical guarantees that they outline.
-We have also managed to become more well-acquainted with the wider literature
-on prediction markets; a key goal motivation before choosing a project had been
-to gain more exposure to the field of algorithmic game theory, and in this
-regard the project has been a personal success.
+incentivised to act in the desired way through paying each user a specific
+amount of money. This has required building a strong understanding of their
+paper to ensure everything has been implemented correctly so that we may
+achieve the theoretical guarantees that they outline.  We have also managed to
+become more well-acquainted with the wider literature on prediction markets; a
+key goal motivation before choosing a project had been to gain more exposure to
+the field of algorithmic game theory, and in this regard the project has been a
+personal success.
 
 Translating the mechanism Freeman et al.\ from a theoretical setting into a
 practical environment has required slightly modifying certain aspects of it to
@@ -63,36 +63,35 @@ This gives us an idea of the signal each arbiter receives on average. However,
 this value will not change from market to market, meaning we are less
 well-equipped to deal with ambiguous wagers since an arbiter has no way to
 signify to the system that the bet was indeed unclear or open to
-interpretation. Conversely, having the value of $\delta$, the ``update
-strength'', vary between markets allows the $k$ from
-Equation~\ref{eq:oneOverPrior} adjust payments according to the perceived
-ambiguity of the market. This issue is, however, somewhat mitigated by the
-likelihood that most bets submitted on our market will be unambiguous in
-nature.
+interpretation. Having the value of $\delta$, the ``update strength'', vary
+between markets allows the $k$ from Equation~\ref{eq:oneOverPrior} adjust
+payments according to its perceived ambiguity. This issue is, however, somewhat
+mitigated by the likelihood that most bets submitted on our market will be
+unambiguous in nature.
 
 One final variation that we make to the original mechanism is that we keep the
-trading fee $f$ fixed. The reason for this is twofold: firstly, it would rely
-heavily on $\delta$, which as we have just discussed does not vary for
-different markets since it is always calculated from an arbiter's history for
-\emph{every} market. If our value of $\delta$ is just an estimate, it can be
-argued there is little sense in trying to set $f$ as precisely as possible.
-Secondly, we have not yet been able to implement a dynamic calculation of $f$
-in the current allotted time. Its calculation would involve other variables,
-which likely require changes to various other parts of the system, and in
-particular the database, which could jeopardise the system's current working
-state before submission. At any rate, this is something we wish to implement in
-the future as, regardless of how much $\delta$ changes, it guarantees that the
-mechanism generates enough revenue to pay arbiters without requiring outside
-subsidisation. We currently have $f$ set to 5\% as Freeman et al.\ show
-empirically that this relatively high fee can subsidise ambiguous markets with
-low values of $\delta$ and high participation. However, since it is not set
-dynamically, there is no way of knowing whether it will be enough to cover
-arbitration costs -- only once we find ourselves paying out more than we have.
-We can avert this crisis by overestimating the value of $f$ required, which is
-the solution we currently opt for, but this is certainly a less satisfying
-solution. Overall, we consider our implementation a success as the tweaks we
-make to the mechanism allow it to be realised in a practical setting that not
-too restrictive in the assumptions it requires.
+trading fee $f$ fixed. The reason for this is twofold: firstly, it relies on
+$\delta$, which as we have just discussed does not vary for different markets
+as it is always calculated from an arbiter's history for \emph{every} market.
+If our value of $\delta$ is just an estimate, it can be argued there is little
+sense in trying to set $f$ as precisely as possible. Secondly, we have not yet
+been able to calculate $f$ dynamically in the allotted time. Its calculation
+involves other variables and would likely require changes to various other
+parts of the system, in particular the database, which could jeopardise the
+system's current working state before submission. At any rate, this is
+something we wish to implement in the future as, regardless of how much
+$\delta$ changes, it guarantees that the mechanism generates enough revenue to
+pay arbiters without requiring outside subsidisation. We currently have $f$ set
+to 5\% as Freeman et al.\ show empirically that this relatively high fee can
+subsidise ambiguous markets with low values of $\delta$ and high participation.
+However, since it is not set dynamically, there is no way of knowing whether it
+will be enough to cover arbitration costs -- only once we find ourselves paying
+out more than we have will we know we have made a mistake. We can avert this
+crisis by overestimating the value of $f$ required, which is the solution we
+currently opt for, but this is certainly a less satisfying solution. Overall,
+we consider our implementation a success as the tweaks we make to the mechanism
+allow it to be realised in a practical setting that does not require
+unrealistic assumptions to be made.
 
 Finally, while not necessarily important from an academic perspective, we
 consider the project a success for having been implemented in the Lisp
@@ -100,8 +99,9 @@ programming language, with which we had had no experience prior to starting the
 project. It has at times rendered development more challenging and introduced
 obstacles that would not have ordinarily been there -- for example, worrying
 about whether a Parenscript and Smackjack statement would translate to the
-correct Javascript -- although the features of the language have also made it a
-more rewarding experience. In addition to harnessing the power of macros, its
+correct Javascript, as opposed to simply writing the correct Javascript
+straight away -- although the features of the language have also made it a more
+rewarding experience. In addition to harnessing the power of macros, its
 functional style along with its simple, consistent syntax has oftentimes
 allowed for the code to be written in a clearer, more concise manner.
 
@@ -193,7 +193,7 @@ scale with the size of the userbase: it is currently set to two for ease of
 testing, though it will somehow need to increase with a growing community (up
 to a point). This in turn allows for finer control over the payout per share.
 
-Finally, there are several sources of needless inefficiency in our code.
+Finally, there are several sources of avoidable inefficiency in our code.
 Firstly, consider the fragments given in Listing~\ref{lst:reportingHistory}.
 In order to get a user's reporting history we first retrieve all of the
 securities reported on by the user from the \code{SECURITY} table, then we
@@ -204,8 +204,32 @@ problem and is common among ORMs such as Mito. We can achieve equivalent
 behaviour for a fraction of the queries using eager loading, which executes a
 single query to retrieve each child record. Mito has a specific macro for this,
 and given this pattern's prevalence in our codebase, would make for a useful
-improvement.
+improvement. We use our \code{with-open-database} macro, given in
+Listing~\ref{lst:databaseMacro}, to define many of the functions exposed by the
+database interface. Problems of inefficiency could arise when calling numerous
+of these functions sequentially, since a connection would be opened and closed
+for each one. It would be more efficient to open the connect only once, execute
+all transactions, and then disconnect. At present, we do not see a solution to
+this that keeps the benefits of macroising the interactions with the database
+in the first place.
 
 \subsection{Closing Remarks}
 
-\textbf{TODO}
+Overall, this project has been successful and we have enjoyed building an
+understanding of the literature surrounding prediction markets, as well as
+gaining proficiency in Lisp. One criticism of the project is that it does not
+necessarily offer something new, since we base our design on an existing
+mechanism in order to achieve their guarantees. While we implement the peer
+prediction market and make necessary adaptations to make it suitable for
+real-world use, there are no novel results that arise from our work. The
+alternative, of proving some new theoretical result, would of course have been
+an unlikely task in the timeframe, although the project could have perhaps
+benefited from being more ambitious. At any rate, what we implement here can
+be used as an effective tool to calculate forecasts on a wide array of bets and
+is open to further extension to increase the potential for real-world use.
+
+We will leave our prediction market running for as long as possible after
+submission here: \url{https://1a091f61d58d.ngrok.io/index}.
+
+Many thanks go to Matthias for supervising this project, in suggesting to look
+at prediction markets, and for helpful advice throughout.

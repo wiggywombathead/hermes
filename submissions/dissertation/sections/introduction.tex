@@ -9,48 +9,47 @@ instruments. Users participate by placing bets and buying or selling shares in
 the markets these bets give rise to. Since users stake their own money, market
 prices should indicate the true beliefs of the userbase and the perceived
 likelihood the events have of occurring. Different users will have different
-beliefs and knowledge informing their decisions, and prediction markets provide
+beliefs and knowledge informing their decisions, hence prediction markets provide
 a means of aggregating information on events of interest using ``the wisdom of
 the crowd''. Shares in these markets are usually traded between \$0 and \$1,
 and for binary events a market will typically pay out \$1 for every share held
 for a positive outcome, and \$0 otherwise.
 
 Traditional prediction markets are centralised in the sense that the system
-provides the bets for the users to trade in, and traders simply choose the
-price point and size of stake at which to participate. Since the system knows
-all possible bets beforehand it is simple to allow it to determine the outcomes
-of the markets and pay out the winnings to stakeholders accordingly. There are
-two issues with this centralised approach: firstly, it restricts the types of
-bets that can be made, since they must be explicitly offered by the market
-maker; secondly, it operates on trust -- there is nothing to stop the central
-market maker from manipulating the system for their own gain. We aim for a
-system that avoids both of these issues.
+provides the possible bets on which to trade, and traders simply choose the
+price point and stake at which to participate. Since the system knows all
+possible bets beforehand it is simple for it to determine the outcomes of the
+markets and pay out the winnings accordingly. There are two issues with this
+centralised approach: firstly, it restricts the types of bets that can be made,
+since they must be explicitly offered by the market maker; secondly, it
+operates on trust -- there is nothing to stop the central market maker from
+manipulating the system for their own gain. We aim for a system that avoids
+both of these issues.
 
 In this project we implement a \emph{decentralised} prediction market in which
-it is up to the userbase itself to define the markets and determine the
-outcomes of these events -- these outcomes are decided upon by consensus among
-a group of users, known as arbiters. This removes the need for a trusted
-centre, however with no central moderator bets may become ambiguous or their
-outcomes subjective, and arbiters may still attempt to manipulate the outcome
-of the market for their own gain by submitting false reports. It is also
-important that users continue to act according to their true beliefs so we may
-learn about the true public sentiment on the events. We base our design on the
-incentive compatible outcome determination mechanism proposed by Freeman,
-Lahaie, and Pennock~\cite{Freeman2017}, which allows us to crowdsource market
-outcomes while incentivising users to act truthfully in all stages of the
-prediction market.
+the userbase itself defines the markets and determines their outcomes -- these
+are decided by consensus among groups of users, known as arbiters. This removes
+the need for a trusted centre, however with no central moderator bets may
+become ambiguous or their outcomes subjective, and arbiters may still attempt
+to manipulate the outcome of the market for their own gain by submitting false
+reports. It is also important that users continue to act according to their
+true beliefs so we may gather useful information on the events. We base our
+design on the incentive compatible peer prediction mechanism introduced by
+Freeman, Lahaie, and Pennock~\cite{Freeman2017}, which allows us to crowdsource
+market outcomes while incentivising users to act truthfully in all stages of
+the prediction market.
 
 The rest of this dissertation is structured as follows: in
 Section~\ref{sec:background} we introduce the various types of prediction
-markets and different approaches by which they can be implemented. In
-Section~\ref{sec:literatureReview} we give an overview of existing
-implementations and the current literature within the algorithmic game theory
-community. In Section~\ref{sec:goals} we state our goals for the project and
-justify why we think this project is worthwhile. Section~\ref{sec:design}
-covers the high-level design of the market on which we base our implementation
-and introduces some theoretical considerations to take into account. In
+markets and different approaches to their implementation. In
+Section~\ref{sec:literatureReview} we give an overview of existing markets and
+the current literature within the algorithmic game theory community. In
+Section~\ref{sec:goals} we state our goals for the project and justify our
+reasons for undertaking it. Section~\ref{sec:design} covers the high-level
+design of the market on which we base our implementation and introduces some
+theoretical considerations we take into account. In
 Section~\ref{sec:implementation} we discuss the details of our implementation
-of the decentralised market, including the tools we use to do so.
-Section~\ref{sec:projectManagement} covers our approach towards the management
-of the project. Finally, in Section~\ref{sec:evaluation} we reflect on the
+of the decentralised market, including the tools we use to develop it.
+Section~\ref{sec:projectManagement} covers our approach towards project
+management. Finally, in Section~\ref{sec:evaluation} we reflect on the
 project's successes and suggest areas for improvement.
