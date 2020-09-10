@@ -92,18 +92,18 @@ Decentralised prediction markets are not a new concept, however current
 examples in the literature lack in the functionality they offer. In the case of
 \emph{Omen}, while they allow any user to create a market, they rely on a
 single oracle to determine the outcome of the event. This leaves a single point
-of ``failure'' in the system and leaves it open to being manipulated. For
-example, listing a biased news source as the oracle could have a significant
-effect on the event's outcome. Although this is mitigated somewhat by
-displaying to traders the oracle chosen, this still encourages them to trade on
-how they believe the oracle will report the market and not necessarily the
-market itself. The mechanism by which \emph{Augur} determines market outcomes
-appears to be an improvement over this, in which multiple reporters from the
-community back their report of the market outcome with \$REP tokens, thus
-implementing a form of reputation system. However, it does not deal with
-ambiguous bets elegantly, offering the option for a report a market's
-outcome as ``invalid''. Given the inevitability of such markets in a
-decentralised setting, this is a key weakness to \emph{Augur}.
+of failure in the system and opens it to manipulation. For example, listing a
+biased news source as the oracle could have a significant effect on the event's
+outcome. Although this is mitigated somewhat by displaying to traders the
+oracle chosen, this still encourages them to trade on how they believe the
+oracle will report the market and not necessarily the market itself. The
+mechanism by which \emph{Augur} determines market outcomes appears to be an
+improvement over this, in which multiple reporters from the community back
+their report of the market outcome with \$REP tokens, thus implementing a form
+of reputation system. However, it does not deal with ambiguous bets elegantly,
+offering the option for a report a market's outcome as ``invalid''.  Given the
+inevitability of such markets in a decentralised setting, this is a key
+weakness to \emph{Augur}.
 
 It is therefore well justified to implement the decentralised peer prediction
 mechanism of Freeman et al. This not only allows users to create markets for

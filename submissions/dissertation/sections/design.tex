@@ -235,11 +235,12 @@ Hunchentoot provides the environment on which we host the server and provides
 automatic session handling, allowing us to implement a login system, easy
 access of HTTP GET and POST parameters submitted via HTML forms, and a simple
 interface through which to define webpage handlers. To generate the webpages
-themselves we use CL-WHO\footnote{Common Lisp With HTML Output.}, which
-translates Lisp expressions into HTML strings that we then pass to the
-appropriate Hunchentoot functions. The structure of a Lisp program maps well to
-that expected by an HTML file, while allowing us to dynamically generate pages
-through the use of macros, making Lisp a suitable choice for this purpose.
+themselves we use CL-WHO\footnote{\textbf{C}ommon \textbf{L}isp \textbf{W}ith
+\textbf{H}TML \textbf{O}utput.}, which translates Lisp expressions into HTML
+strings that we then pass to the appropriate Hunchentoot functions. The
+structure of a Lisp program maps well to that expected by an HTML file, while
+allowing us to dynamically generate pages through the use of macros, making
+Lisp a suitable choice for this purpose.
 
 Mito is an Object Relational Mapper (ORM) that provides an interface with which
 we can connect and interact with a Relational Database Management System from

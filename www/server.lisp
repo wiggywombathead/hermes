@@ -241,9 +241,6 @@
 					  (:td (:form :action "resolve-market" :method "POST"
 								  (:input :type :hidden :name "bet-id" :value (db:security-id s))
 								  (:input :type :submit :value "Report Outcome")))))))))
-					;  (:td (:form :action "close-market" :method "POST"
-					;			  (:input :type :hidden :name "bet-id" :value (db:security-id s))
-					;			  (:input :type :submit :value "Close Market")))))))))
 
 	;; create a new market
 	(if (session-value 'session-user)
@@ -251,7 +248,7 @@
 		(:h2 "Create a Market")
 		(:div :id "market-maker"
 			  (:form :action "create-market" :method "POST"
-					 ;:onsubmit (js:nonempty-fields "" bet deadline_date)
+					 :onsubmit (js:nonempty-fields "" bet deadline_date)
 					 (:table
 					   (:tr
 						 (:td "Bet")
@@ -274,14 +271,6 @@
 		\(binary\) event you want, such as the winner of some sports event, or
 		whether or not the next US president will be a Democrat.")
 
-;;	(:p "This is a peer prediction market where you can bet on the (binary)
-;;		outcome of anything you want, such as the winner of the presidential
-;;		election, or the winner of some sports event. It uses a peer-prediction
-;;		mechanism to collect bets and decide on their outcome based on reports
-;;		from its userbase. This opens up the types of bets that can be made
-;;		since they do not have to be specifically provided by a central
-;;		moderator, and it is left to the users to decide on their outcome.")
-	
 	(:h2 "How do I use it?")
 	(:p "First you need to register. The dashboard will then show all of the
 		current markets. Active markets are those whose deadlines have not
@@ -290,13 +279,11 @@
 		outcome of the event.")
 
 	(:h3 "Creating markets")
-	(:p "Create a market by entering a bet and a deadline by which the outcome
-		will be known. You are free to make any bet you like, but since other
-		users will report on the bet's outcome it is a good to make it
-		unambiguous to minimise the chance of misunderstanding. The deadline
-		should be the earliest time at which the outcome for the event can be
-		determined -- this prevents users trading in a market whose outcome
-		they know.")
+	(:p "Create a market by entering a bet and a deadline by which trading will
+		cease. You are free to make any bet you like, but since other users
+		will report on the bet's outcome it is a good to make it unambiguous to
+		minimise the chance of misunderstanding. The deadline should be any
+		time before the event has taken place.")
 
 	(:h3 "Trading in markets")
 	(:p "Shares can be bought and sold in any of the markets listed under
@@ -311,24 +298,15 @@
 	(:p "If you buy shares in a market, you are saying you believe the event
 		will happen, since you expect people to report a positive outcome and
 		hence the payout per share will tend towards $1. Similarly, when you
-		sell shares you are predicting the opposite.")
-
-	(:p "As in any other market money can be made by buying low and selling
-		high, meaning you don't have to hold onto your shares right up to the
-		deadline. Note that we have trading fees to raise funds to pay users
-		their winnings.")
+		sell shares you are predicting the opposite. You don't have to hold
+		onto your shares right up to the deadline: you can make a profit by
+		buying shares low and selling them high.")
 
 	(:h3 "Resolving Markets")
 	(:p "Markets whose deadlines have passed are listed under \"Unresolved
 		Markets\". You can report its outcome based on your observation \(e.g.
-		reading the news, watching the match\) and you will receive a small
-		reward for doing so.")
-
-	(:p "There are two additional values to submit: \"Positive belief\" and
-		\"Negative belief\". These are your estimations of the probability that
-		you received a positive signal given that the outcome was positive, and
-		the probability that you received a positive outcome given that the
-		outcome was negative.")
+		reading the news, watching the match\) and you will receive a reward
+		for doing so.")
 
 	(:p "Once enough reports on the outcome have been received, the outcome of
 		the event and payoff for each share held will be the proportion of
@@ -449,7 +427,7 @@
 
 	  (:form :action "first-dibs" :method "POST"
 			 :onchange (ps (ajax-transaction-cost-create))
-			 ;:onsubmit (js:nonempty-fields "Quantity cannot be empty" shares)
+			 :onsubmit (js:nonempty-fields "Quantity cannot be empty" shares)
 			 (:table
 			   (:tr
 				 (:td "Market")
@@ -517,12 +495,6 @@
 
 	  (setf new-budget (- budget paid))
 
-	  ;; only pay the bank if the user can afford it
-	  ;; TODO: deal with more gracefully?
-	;  (if (> budget paid)
-	;	(db:pay-bank session-user paid)
-	;	(redirect "/index"))
-
 	  (if (mkt:sufficient-funds? budget paid shares fee)
 		(db:pay-bank session-user paid)
 		(redirect "/index"))
@@ -575,7 +547,7 @@
 		(:h1 "Trade")
 		(:form :action "buy-or-sell-security" :method "POST"
 			   :onchange (ps (ajax-transaction-cost-trade))
-			   ;:onsubmit (js:nonempty-fields "Quantity cannot be empty" shares buying)
+			   :onsubmit (js:nonempty-fields "Quantity cannot be empty" shares buying)
 			   (:table
 				 (:input :type :hidden :name "bet-id" :value id)
 
@@ -622,7 +594,7 @@
 				   (:td :colspan 3
 						(:input :type "submit" :value "Trade"))))))))))
 
-;; TODO
+;; TODO: macroise/functionise this
 ;(defun transaction-summary (bet deadline shares paid fee budget-remaining))
 
 (define-url-fn
@@ -675,10 +647,6 @@
 
 	  (setf paid (+ total-price fee))
 	  (setf new-budget (- budget paid))
-
-	  (format T "BUDGET: ~D, PAID: ~D, SHARES: ~D TOTAL: ~D~%"
-			  budget paid shares
-			  (+ budget paid shares))
 
 	  (if (mkt:sufficient-funds? budget paid shares fee)
 		(db:pay-bank session-user paid)
@@ -734,7 +702,6 @@
 
 	  (htm
 		(:form :action "report-security" :method "POST"
-			   ;:onsubmit (js:nonempty-fields "" positive_belief negative_belief)
 			   (:input :type :hidden :name "id" :value id)
 			   (:table
 				 (:tr

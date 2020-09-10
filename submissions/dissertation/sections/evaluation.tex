@@ -169,7 +169,7 @@ encouraging user participation.
 \subsubsection{Improvements}
 
 Currently we allow any user to create a market for an event of their choosing.
-Moreover we require that upon creating the market, they are only able to buy
+We require that upon creating the market, they are only able to buy
 shares. This is a natural restriction that means users only make markets for
 events they believe will, more than likely, occur. However, there is nothing to
 stop them from simply negating the statement and creating a market for this.
@@ -185,13 +185,13 @@ An issue in our implementation is that of deciding when there are enough
 reports. Instead of randomly selecting users to act as arbiters, which may
 cause delays in determining the outcome of the market as we must wait for each
 arbiter to report, we allow any user to act as an arbiter, hopefully increasing
-the speed with which we can close markets. Moreover, by virtue of how we set
-the parameter $k$ in Equation~\ref{eq:oneOverPrior}, arbiters are incentivised
-to act truthfully regardless of whether they hold a stake in the market.
-However, it is undecided how the number of arbiters required should
-scale with the size of the userbase: it is currently set to two for ease of
-testing, though it will somehow need to increase with a growing community (up
-to a point). This in turn allows for finer control over the payout per share.
+the speed with which we can close markets. Thanks to how we set the parameter
+$k$ in Equation~\ref{eq:oneOverPrior}, arbiters are incentivised to act
+truthfully regardless of whether they hold a stake in the market. However, it
+is undecided how the number of arbiters required should scale with the size of
+the userbase: it is currently set to two for ease of testing, though it will
+somehow need to increase with a growing community (up to a point). This in turn
+allows for finer control over the payout per share.
 
 Finally, there are several sources of avoidable inefficiency in our code.
 Firstly, consider the fragments given in Listing~\ref{lst:reportingHistory}.
@@ -229,7 +229,6 @@ be used as an effective tool to calculate forecasts on a wide array of bets and
 is open to further extension to increase the potential for real-world use.
 
 We will leave our prediction market running for as long as possible after
-submission here: \url{https://1a091f61d58d.ngrok.io/index}.
-
-Many thanks go to Matthias for supervising this project, in suggesting to look
-at prediction markets, and for helpful advice throughout.
+submission here: \url{https://1a091f61d58d.ngrok.io/index}. Many thanks go to
+Matthias for supervising this project, in suggesting to look at prediction
+markets, and for helpful advice throughout.
