@@ -1,4 +1,4 @@
-;;;; Implementation of crowdsourced outcome determination in prediction markets
+;;;; Demonstration of trading and peer prediction mechanism
 
 (load "msr.lisp")
 (load "util.lisp")

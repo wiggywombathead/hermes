@@ -27,15 +27,24 @@
 (defun main-script ()
   " main javascript script "
   (ps
-	(set-timer)
+	; update prices every 5 seconds
+	(set-interval (lambda () (ajax-share-price)) 5000)
+	(close-next-market)
 
-	(defun set-timer ()
+	(defun close-next-market ()
 	  " set the market closing function to execute when next market expires "
 	  (chain smackjack
 			 (ajax-set-timer #'(lambda (response)
 								 (set-timeout (lambda ()
 												(chain location (reload)))
 											  (* (@ response seconds) 1000))))))
+	(defun display-share-price (response)
+	  (setf (chain document (get-element-by-id :share-price) inner-h-t-m-l)
+			(@ response price)))
+
+	(defun ajax-share-price ()
+	  (let ((shares (chain document (get-element-by-id :shares) value)))
+		(chain smackjack (ajax-share-price shares display-share-price))))
 
 	(defun display-projected-cost (response)
 	  " asynchronously update projected transaction cost "

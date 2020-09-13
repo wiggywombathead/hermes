@@ -214,12 +214,13 @@
 				(:tr
 				  (:td (format T "~S" (db:security-bet s)))
 				  (:td (fmt "~A" (pretty-datetime (db:security-deadline s))))
-				  (:td :class "number"
+				  (:td :id "share-price" :class "number"
 					   (format T "~4$" (msr:share-price (db:security-shares s))))
 				  (if (session-value 'session-user)
 					(htm
 					  (:td (:form :action "trade-security" :method "POST"
 								  (:input :type :hidden :name "bet-id" :value (db:security-id s))
+								  (:input :type :hidden :id "shares" :value (db:security-shares s))
 								  (:input :type :submit :value "Trade")))))))))
 
 	(:h2 "Unresolved Markets")
