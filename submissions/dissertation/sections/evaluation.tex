@@ -32,23 +32,23 @@ arbitration stage to incentivise truth-telling:
 	\label{eq:kBoundB}
 	k \ge \frac{2 B (1+f)}{f m \delta}
 \end{equation}
-
+%
 in which $B$ is the maximum amount of money that any single agent can spend in
-the market. They use this instead of Equation~\ref{eq:kBoundB} as they view
-knowledge about an upper bound on the number of securities that any single
-agent owns, $|n_i|$, as ``an unsatisfying restriction''. However, since we are
-the prediction market, we require knowledge about each agent's position in
-order to pay out winnings appropriately by the time the event has taken place.
-Hence we can use Equation~\ref{eq:kBoundN} to calculate the minimum value of
-$k$, giving a more direct means of computing the parameter and a more exact
-bound.
+the market. They use the above inequality instead of
+inequality~\eqref{eq:kBoundN} as they view knowledge about an upper bound on
+the number of securities that any single agent owns, $|n_i|$, as ``an
+unsatisfying restriction''. However, since we are the prediction market, we
+require knowledge about each agent's position in order to pay out winnings
+appropriately by the time the event has taken place.  Hence we can use
+inequality~\eqref{eq:kBoundN} to calculate the minimum value of $k$, giving a
+more direct means of computing the parameter and a more exact bound.
 
 Another modification we make is in our calculation of what we have referred to
 as a user's ``positive signal belief'' and ``negative signal belief''. These
 are so named because in an earlier version of the market, each time an arbiter
 was asked to report on an event's outcome they would be asked for an estimation
-of $Pr[x_i=1|X=1]$, the probability that they receive a positive signal given
-the true result is positive; and $Pr[x_i=1|X=0]$, the probability that they
+of $\Pr[x_i=1|X=1]$, the probability that they receive a positive signal given
+the true result is positive; and $\Pr[x_i=1|X=0]$, the probability that they
 receive a positive signal given the event was truly negative. Freeman et al.\
 assume knowledge of the news sources from which users gain their signals -- for
 example, for some political event it is known that 10\% of the population
@@ -57,14 +57,14 @@ right-leaning sources. These signal probabilities therefore directly follow. In
 practice this is completely unrealistic, since users may check a variety of
 news sources at varying points on the political spectrum, so we cannot know
 from where exactly which proportions of the population are getting their
-information. Instead we compute such signal beliefs using each arbiter's
+information. Instead, we compute the signal beliefs using each arbiter's
 reporting history and the true outcomes of the events they have reported on.
 This gives us an idea of the signal each arbiter receives on average. However,
 this value will not change from market to market, meaning we are less
 well-equipped to deal with ambiguous wagers since an arbiter has no way to
 signify to the system that the bet was indeed unclear or open to
 interpretation. Having the value of $\delta$, the ``update strength'', vary
-between markets allows the $k$ from Equation~\ref{eq:oneOverPrior} adjust
+between markets allows the $k$ from equation~\eqref{eq:oneOverPrior} adjust
 payments according to its perceived ambiguity. This issue is, however, somewhat
 mitigated by the likelihood that most bets submitted on our market will be
 unambiguous in nature.
@@ -99,7 +99,7 @@ programming language, with which we had had no experience prior to starting the
 project. It has at times rendered development more challenging and introduced
 obstacles that would not have ordinarily been there -- for example, worrying
 about whether a Parenscript and Smackjack statement would translate to the
-correct Javascript, as opposed to simply writing the correct Javascript
+correct JavaScript, as opposed to simply writing the correct JavaScript
 straight away -- although the features of the language have also made it a more
 rewarding experience. In addition to harnessing the power of macros, its
 functional style along with its simple, consistent syntax has oftentimes
@@ -126,14 +126,14 @@ choice regarding libraries that would allow one to plot such graphs, such as
 ADW-Charting and CGN, which are both available through Quicklisp.
 
 One way to generalise the mechanism we have implemented would be to allow for
-different types of events to be wagered on. Currently users may only submit
+different types of events to be wagered on. Currently, users may only submit
 events whose outcome is either a ``yes'' or a ``no'' -- this could be improved
-upon by allowing for categorical markets, in which traders are offered to
-buy or sell shares in more than two mutually exclusive outcomes. For example, a
-market could be created on the bet, ``Which country will host the 2032 Olympic Games'',
-with options to invest in Germany, Italy, the United States, and Canada. There
-are two issues with this that prevented it from being explored within the
-time-frame of this project. Firstly, a great deal of the analysis of
+upon by allowing for categorical markets, in which traders are offered to buy
+or sell shares in more than two mutually exclusive outcomes. For example, a
+market could be created on the bet, ``Which country will host the 2032 Olympic
+Games'', with options to invest in Germany, Italy, the United States, and
+Canada. There are two issues with this that prevented it from being explored
+within the time-frame of this project. Firstly, a great deal of the analysis of
 \cite{Freeman2017} relies on the assumption that traders are participating in a
 binary market, hence much of the parameters would have to be derived again in
 order to successfully translate the incentive-compatible mechanism to the
@@ -159,7 +159,7 @@ specify them ourselves, which may be inaccurate and negates the point of
 implementing a decentralised market in the first place.
 
 With more time, we would also look to implement more responsiveness from the 
-system. This would include building on the Javascript code already in place to
+system. This would include building on the JavaScript code already in place to
 have prices constantly updating, so that users are informed of price changes as
 they happen and they may execute trades at these up-to-date prices. Similarly,
 countdowns for markets whose deadlines are imminent would be useful in not only
@@ -186,7 +186,7 @@ reports. Instead of randomly selecting users to act as arbiters, which may
 cause delays in determining the outcome of the market as we must wait for each
 arbiter to report, we allow any user to act as an arbiter, hopefully increasing
 the speed with which we can close markets. Thanks to how we set the parameter
-$k$ in Equation~\ref{eq:oneOverPrior}, arbiters are incentivised to act
+$k$ in equation~\eqref{eq:oneOverPrior}, arbiters are incentivised to act
 truthfully regardless of whether they hold a stake in the market. However, it
 is undecided how the number of arbiters required should scale with the size of
 the userbase: it is currently set to two for ease of testing, though it will
@@ -208,10 +208,10 @@ improvement. We use our \code{with-open-database} macro, given in
 Listing~\ref{lst:databaseMacro}, to define many of the functions exposed by the
 database interface. Problems of inefficiency could arise when calling numerous
 of these functions sequentially, since a connection would be opened and closed
-for each one. It would be more efficient to open the connect only once, execute
-all transactions, and then disconnect. At present, we do not see a solution to
-this that keeps the benefits of macroising the interactions with the database
-in the first place.
+for each one. It would be more efficient to connect only once, execute all
+transactions, and then disconnect. At present, we do not see a solution to this
+that keeps the benefits of macroising the interactions with the database in the
+first place.
 
 \subsection{Closing Remarks}
 
@@ -223,10 +223,10 @@ mechanism in order to achieve their guarantees. While we implement the peer
 prediction market and make necessary adaptations to make it suitable for
 real-world use, there are no novel results that arise from our work. The
 alternative, of proving some new theoretical result, would of course have been
-an unlikely task in the timeframe, although the project could have perhaps
-benefited from being more ambitious. At any rate, what we implement here can
-be used as an effective tool to calculate forecasts on a wide array of bets and
-is open to further extension to increase the potential for real-world use.
+an unlikely task in the time frame, although the project could have perhaps
+benefited from being more ambitious. At any rate, what we implement here can be
+used as an effective tool to calculate forecasts on a wide array of bets and is
+open to further extension to increase the potential for real-world use.
 
 We will leave our prediction market running for as long as possible after
 submission here: \url{https://1a091f61d58d.ngrok.io/index}. Many thanks go to

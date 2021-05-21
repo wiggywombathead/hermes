@@ -219,7 +219,7 @@ do not manipulate the mechanism.
 Other features that we look to implement that are not essential to the running
 of the system but highly desirable for user experience include asynchronous
 communication with the server to display up-to-date pricing information without
-a page refresh, and the automated closing of markets.  Indeed, while their
+a page refresh, and the automated closing of markets. Indeed, while their
 current omission does not necessarily hamper the functionality of the market
 itself, they should be implemented in order for the system to run smoothly and
 independently.
@@ -411,7 +411,7 @@ generalises this mechanism to pay out different amounts depending on the
 signals reported by paired arbiters. For paired arbiters $i$ and $j$ with
 reports $\hat{x}_i$ and $\hat{x}_j$, the 1/prior mechanism pays $i$ and $j$ as
 a reward for reporting on the market outcome:
-
+%
 \begin{equation}
 	\label{eq:oneOverPrior}
 	u(\hat{x}_i, \hat{x}_j) =
@@ -421,7 +421,7 @@ a reward for reporting on the market outcome:
 		0 & \text{otherwise}
 	\end{cases}
 \end{equation}
-
+%
 in which $k$ is a parameter and $\mu$ is the (common) prior belief that $X=1$.
 A suitable value to use for $\mu$ would be the closing price for the market: if
 users feel an event is likely to happen the share price will be pushed towards
@@ -434,14 +434,14 @@ positive signal, and let $\mu_0^i$ be the probability that, given that agent
 $i$ receives a negative signal, another randomly chosen agent receives a
 positive signal. We require the ``update'' probabilities $\mu_1, \mu_0$ to be
 common across all agents, which we can achieve by simply taking:
-
+%
 \begin{equation}
 	\begin{gathered}
 		\mu_1 := \min_i \mu_1^i \\
 		\mu_0 := \max_i \mu_0^i
 	\end{gathered}
 \end{equation}
-
+%
 The modified payment method we use, the ``1/prior with midpoint'' mechanism, is
 now simply Equation~\ref{eq:oneOverPrior} with $\mu$ replaced by $(\mu_1 +
 \mu_0)/2$. This guarantees the incentives for arbiters are the same regardless
@@ -561,24 +561,24 @@ mentioned, in any MSR an agent wishing to purchase $q'-q$ shares of a given
 security must pay $C(q')-C(q)$ for convex, differentiable, monotonically
 increasing function $C$. In the case of LMSR, for current number of shares $q$
 and liquidity parameter $b$, this function is:
-
+%
 \begin{equation}
 	\label{eq:LMSR}
 	C_b(q) = b \log (1 + e^{q/b})
 \end{equation}
-
+%
 This function also accommodates selling shares, in which case $q'<q$.  Since a
 user must specify a desired amount of shares to buy or sell before we can
 determine how much to charge them, we cannot use this function to directly
 quote a share price. Instead, we can calculate the cost of the transaction were
 the user to purchase a miniscule quantity of shares and quote this as the share
 price. This is simply the derivative of Equation~\ref{eq:LMSR} and is given by:
-
+%
 \begin{equation}
 	\label{eq:LMSRprice}
 	p_b(q) = \frac{ e^{q/b} }{ 1 + e^{q/b} }
 \end{equation}
-
+%
 Although Equation~\ref{eq:LMSRprice} quotes the share price, it is not accurate
 to use it to calculate how much an agent should pay, since the agent's
 participation in the market will immediately change this price. It does,
@@ -646,16 +646,17 @@ weakness of this approach is discussed in Section~\ref{sec:evaluation}.
 These signal beliefs are used to compute the update probabilities $\mu_1$ and
 $\mu_0$ which are used in the 1/prior-with-midpoint mechanism. Given the
 closing price $\mu$ and the positive and negative signal beliefs
-$Pr[x_i=1|X=1]$ and $Pr[x_i=1|X=0]$ for each arbiter $i$, we can compute the
+$\Pr[x_i=1|X=1]$ and $\Pr[x_i=1|X=0]$ for each arbiter $i$, we can compute the
 positive update $\mu_1^i$ for each $i$ and randomly chosen $j$ as follows:
-
+%
 \begin{equation}
 	\begin{aligned}
-		\mu_1^i & = Pr[x_j=1|x_i=1] \\
-		& = Pr[x_j=1|X=0] \cdot Pr[X=0|x_i=1] + Pr[x_j=1|X=1] \cdot Pr[X=1|x_i=1]
+		\mu_1^i & = \Pr[x_j=1|x_i=1] \\
+		& = \Pr[x_j=1|X=0] \cdot \Pr[X=0|x_i=1] + \Pr[x_j=1|X=1] \cdot
+		\Pr[X=1|x_i=1]
 	\end{aligned}
 \end{equation}
-
+%
 We use the same approach to compute the negative update $\mu_0^i$ for each $i$,
 and hence we may now also compute the common updates $\mu_1$ and $\mu_0$ to pay
 arbiters the correct reward for arbitration. Once done, we set the outcome of

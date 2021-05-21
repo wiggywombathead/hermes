@@ -72,7 +72,7 @@ All examples so far have involved a centralised market mechanism. These types
 of systems involve a central authority providing the securities upon which
 users may trade and then verifying their outcome. \emph{Decentralised} markets
 allow the users to specify the securities themselves and trade shares in them.
-Several examples of decentralised markets exist and they are often implemented
+Several examples of decentralised markets exist, and they are often implemented
 with cryptocurrencies. Peterson et al.~\cite{Peterson2015} study the setting
 and implement the oracle at the heart of \emph{Augur}~\cite{Augur}, a
 decentralised prediction market built upon the Ethereum blockchain, which
@@ -115,7 +115,7 @@ the outcome will be themselves. An important aspect of decentralised markets
 must therefore be that the outcome is determined by the community, not a single
 source. 
 
-In contrast to \emph{Augur}, which implements a traditional orderbook using
+In contrast to \emph{Augur}, which implements a traditional order book using
 Ethereum, \emph{Omen} uses an automated market maker to provide liquidity to
 its securities. As we have discussed, automated market makers can be
 implemented via Market Scoring Rules. Hanson~\cite{Hanson2003} shows that we
@@ -169,19 +169,18 @@ As we will cover in the following section, the goals of this project are more
 concerned with the game-theoretic aspects of implementing a decentralised
 prediction market. This involves encouraging users to act in the desired
 manner, which in our case means ``telling the truth'' about both their beliefs
-on an event's outcome as well as their observation of the result. Since
-combinatorial prediction markets are often centralised, meaning bets come
-straight from the system and not its users, all users have to do is choose to
-participate in the market at what they view as the correct price, hence there
-is much less opportunity for manipulation. For this reason, combinatorial
-prediction markets are more concerned with the computational aspects of
-offering combinatorial securities to its traders, and in particular how to
-compute accurate prices on combinations of interrelated securities. Both
-decentralised and combinatorial settings are interesting in their own right,
-and both can achieve an added level of expressiveness compared to a traditional
-prediction market such as the IEM. Here we will briefly describe approaches
-taken to improving the efficiency of pricing in the \emph{Predictalot}
-prediction market.
+on an event's outcome and their observation of the result. Since combinatorial
+prediction markets are often centralised, meaning bets come straight from the
+system and not its users, all users have to do is choose to participate in the
+market at what they view as the correct price, hence there is much less
+opportunity for manipulation. For this reason, combinatorial prediction markets
+are more concerned with the computational aspects of offering combinatorial
+securities to its traders, and in particular how to compute accurate prices on
+combinations of interrelated securities. Both decentralised and combinatorial
+settings are interesting in their own right, and both can achieve an added
+level of expressiveness compared to a traditional prediction market such as the
+IEM. Here we will briefly describe approaches taken to improving the efficiency
+of pricing in the \emph{Predictalot} prediction market.
 
 We will first discuss the hardness of using a Market Scoring Rule to calculate
 prices in a combinatorial market. The class NP is the set of decision problems
@@ -201,7 +200,7 @@ a CNF formula, where each clause has two literals.
 
 Dud\'ik et al.~\cite{Dudik2012} restrict the bidding language to achieve
 tractability. This is done by firstly calculating prices as if markets were
-independent then detecting an minimising arbitrage. Opportunities for arbitrage
+independent then detecting and minimising arbitrage. Opportunities for arbitrage
 are detected using constraint generation, in which arbitrage occurs when the
 price falls below a certain level, and this is minimised using optimisation
 methods. This does not always completely remove all arbitrage opportunities.

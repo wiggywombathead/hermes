@@ -108,10 +108,11 @@ $\psi$ are true, \$0 if only $\psi$ is true, and refunds the user if $\psi$ is
 false. These orders will yield a payoff $\gamma^{\langle \omega \rangle}$
 depending on the state $\omega \in \Omega$, and can be written as:
 %
-$$ \gamma^{\langle \omega
-\rangle} = q \cdot \mathds{1}_{\omega \in \psi} (\mathds{1}_{\omega \in \phi} -
-p) $$
-
+\[
+	\gamma^{\langle \omega \rangle} = q \cdot \mathds{1}_{\omega \in \psi}
+	(\mathds{1}_{\omega \in \phi} - p)
+\]
+%
 in which $\omega \in \phi$ means outcome $\omega$ satisfies the Boolean formula
 $\phi$. This says that the order will receive an overall payoff of zero if the
 true world state $\omega$ does satisfy $\psi$, meaning the order is invalid and
@@ -125,13 +126,15 @@ from user $i$. Since they will collect the money paid by the trader and payout
 their winnings according to each user's payoff vector, the auctioneer receives
 payoff:
 %
-$$ \gamma_a = \sum_i -\alpha_i \gamma_i $$
-
-The \emph{indivisible matching problem} asks the question that, given a set of
-orders, does there exist a set of $\alpha_i \in \{0,1\}$ and $\sum_i \alpha_i
-\ge 1$ such that for any outcome $\omega$ the auctioneer receives payoff
-$\gamma_a^{\langle \omega \rangle} \ge 0$? In other words, the auctioneer is
-looking to accept some bundle of orders \emph{without risk}.
+\[
+	\gamma_a = \sum_i -\alpha_i \gamma_i
+\]
+%
+The \emph{indivisible matching problem} asks that, given a set of orders, does
+there exist a set of $\alpha_i \in \{0,1\}$ and $\sum_i \alpha_i \ge 1$ such
+that for any outcome $\omega$ the auctioneer receives payoff $\gamma_a^{\langle
+\omega \rangle} \ge 0$? In other words, the auctioneer is looking to accept
+some bundle of orders \emph{without risk}.
 
 \textbf{Example} Suppose $\mathcal{E} = \{X_1, X_2\}$ and there are two orders:
 agent 1 wishes to buy two shares of security $S_{X_1}$ at \$0.6 per share while
@@ -157,14 +160,14 @@ share. Assuming the auctioneer accepts both orders, the payoffs are as follows
 			0 & -1 & 1 & 1 \end{matrix} \right\rangle
 	\end{aligned}
 \end{equation*}
-
+%
 Accepting both orders is therefore not a valid solution to the indivisible
 matching problem since in the event that $\omega = \{X_1,\bar{X_2}\}$ the
 auctioneer would have to run a loss. In fact, finding a solution to the
 indivisible matching problem is NP-complete~\cite[Ch.~26]{AGTBook}. Although we
 do not focus on combinatorial prediction markets in this project, it is useful
 to illustrate the challenges of designing efficient market mechanisms. In
-particular, we are concerned with illiquidity, which arises when there is too
+particular, we are concerned with low liquidity, which arises when there is too
 little participation in the market for a trade to be executed.
 
 \subsection{Trading Mechanisms}
@@ -199,7 +202,7 @@ believe to be a security's ``true'' value in order to undercut another seller
 and make a profit. This is not useful in a prediction market setting, where we
 want to elicit the true beliefs from users.
 
-These problems arising from market illiquidity can be averted by using an
+These problems arising from market low liquidity can be averted by using an
 automated market maker, in which a price maker is nearly always willing to
 accept both buy and sell orders at a certain price. Participation in the market
 will have an effect on these prices, the exact nature of which will be down to
@@ -230,8 +233,10 @@ shares for event $j \in \Omega$. Let $\vect{q} = (q_1, \ldots, q_{|\Omega|})$
 be the vector of outstanding shares of all contracts. The share-ratio cost
 function is:
 %
-$$ C(\vect{q}) = \sqrt{\sum_j q_j^2} $$
-
+\[
+	C(\vect{q}) = \sqrt{\sum_j q_j^2}
+\]
+%
 A trader wishing to buy $q_j' - q_j$ shares of security $j$, thus changing the
 number of outstanding shares of $j$ from $q_j$ to $q_j'$, pays the market
 $C(\vect{q}_{-j}, q_j') - C(\vect{q})$.\footnote{We use $\vect{q}_{-j}$ to
@@ -240,8 +245,10 @@ There is a corresponding price function $p_j$ that gives the price for
 purchasing an infinitesimal quantity of shares in security $j$ and is used to
 quote a share price to market participants:
 %
-$$ p_j = \frac{q_j}{\sum_k q_k^2} $$
-
+\[
+	p_j = \frac{q_j}{\sum_k q_k^2}
+\]
+%
 This share price $p_j$ should not be used to calculate the cost of a
 transaction since an agent's participation in the market will instantly change
 this value. The purpose of a prediction market is to elicit private information
@@ -268,12 +275,12 @@ scoring rule gives some reward $Q(\vect{r},i)$ if the $i$th event occurs, given
 the probability vector $\vect{r}$. The cost function corresponding to the
 quadratic scoring rule is:
 %
-$$
-C(\vect{q}) =
-\frac{\sum_j q_j}{|\Omega|} + \frac{\sum_j q_j^2}{4b}  +
-\frac{\left( \sum_j q_j \right)^2}{4b|\Omega|} - \frac{b}{|\Omega|}
-$$
-
+\[
+	C(\vect{q}) =
+	\frac{\sum_j q_j}{|\Omega|} + \frac{\sum_j q_j^2}{4b}  +
+	\frac{\left( \sum_j q_j \right)^2}{4b|\Omega|} - \frac{b}{|\Omega|}
+\]
+%
 Scoring rule markets typically pay out \$1 for each share held of a security
 whose outcome was positive, and \$0 otherwise. In contrast, parimutuel markets
 can have a different payoff per share since they pay out an equal portion of

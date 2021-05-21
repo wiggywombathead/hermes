@@ -68,7 +68,7 @@ theoretical standpoint.
 \subsubsection{Trading Mechanism}
 
 The market stage allows users to create markets for any bet they desire and
-specifies the how the share price reacts according to user participation. As we
+specifies how the share price reacts according to user participation. As we
 implement a decentralised market, we place no restriction on the bet that can
 be placed other than that its outcome must be binary. As we mention in
 Section~\ref{sec:tradingMechanisms}, we implement a scoring rule market, in
@@ -160,7 +160,7 @@ mechanism pays a reward $u(\hat{x}_i, \hat{x}_j)$ as follows:
 		0 & \text{otherwise}
 	\end{cases}
 \end{equation}
-
+%
 In this, $k$ is a parameter and $\mu$ is the common prior belief that $X=1$. A
 suitable value to use for $\mu$ in our case is the closing price of the market:
 if users feel the event is likely to occur they will buy shares of it, pushing
@@ -178,10 +178,14 @@ a negative signal, another randomly chosen user receives a positive signal. We
 require a common value for these ``update'' probabilities across all agents, so
 we define the $\mu_1$ and $\mu_0$ as follows:
 %
-\begin{equation} \begin{gathered} \mu_1 := \min_i \mu_1^i \\ \mu_0 := \max_i
-\mu_0^i \end{gathered} \end{equation}
-
-The modified payment mechanism is now simply Equation~\ref{eq:oneOverPrior}
+\begin{equation}
+	\begin{gathered}
+		\mu_1 := \min_i \mu_1^i \\
+		\mu_0 := \max_i \mu_0^i
+	\end{gathered}
+\end{equation}
+%
+The modified payment mechanism is now simply equation~\eqref{eq:oneOverPrior}
 with $\mu$ replaced by $(\mu_1 + \mu_0)/2$. This is the
 ``1/prior-with-midpoint'' mechanism and guarantees that the incentives for
 arbiters are always the same, no matter the signal they receive. The arbiter
@@ -209,7 +213,7 @@ the server, the ability to define webpages, and a means of interacting with a
 database for persistent storage. There are a number of useful packages provided
 by Quicklisp that allows all of this functionality to be implemented in Lisp.
 Using a single language to write the entire application -- as opposed to, say,
-a combination of HTML, PHP, MySQL, and Javascript -- encourages a cleaner and
+a combination of HTML, PHP, MySQL, and JavaScript -- encourages a cleaner and
 more flexible implementation and allows us to make full use of the tools
 available to the language. A key advantage to using Lisp in particular is its
 focus on extensibility, and specifically its powerful macro system allows us to
@@ -249,12 +253,12 @@ familiarity, though this choice is largely immaterial given our simple
 requirements. We can compose more complex MySQL statement using SXQL, and this
 integrates well with Mito so that the two are effectively used as one library.
 
-Parenscript allows us to incorporate Javascript into the site with the
-intention of improving user experience. Currently it is used as a means of
-performing client-side validation of form data, to ensure information arrives
-at the server in the correct format and that all the necessary data is there.
-It also enables us to use the Smackjack library, allowing us to have
-asynchronous communication between the client and server. Particularly
+Parenscript allows us to incorporate JavaScript into the site with the
+intention of improving user experience. Currently this allows us to perform
+client-side validation of form data, to ensure information arrives at the
+server in the correct format and that all the necessary data is there before
+sending it. It also enables us to use the Smackjack library, allowing us to
+have asynchronous communication between the client and server. Particularly
 important in any real-time market, this ensures all prices displayed to the
 user are current and the user is interacting with an up-to-date state of the
 system.

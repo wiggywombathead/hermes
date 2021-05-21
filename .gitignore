@@ -6,7 +6,9 @@
 *.dvi
 *.fdb_latexmk
 *.fls
+*.lof
 *.log
+*.lol
 *.nav
 *.out
 *.snm
@@ -15,3 +17,5 @@
 
 test/
 *.sh
+
+feedback.pdf

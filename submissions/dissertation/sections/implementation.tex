@@ -183,7 +183,7 @@ Hanson~\cite{Hanson2007}, whose cost function is defined as follows:
 	\label{eq:LMSR}
 	C(\vect{q}) = b \log \left( \sum_j e^{q_j/b} \right)
 \end{equation}
-
+%
 This assumes that each security $j$ is one of a collection of mutually
 exclusive and exhaustive outcomes. Since we are only dealing with binary
 events, we can compute a share price based only on the number of shares bought
@@ -198,7 +198,7 @@ $q=q_1-q_0$:
 	\label{eq:LMSRbinary}
 	C_b (q) = b \log (1 + e^{q/b})
 \end{equation}
-
+%
 In these cost functions, $b>0$ appears as a parameter that allows us to control
 the responsiveness of $C$. A lower value of $b$ corresponds to a more sensitive
 share price, meaning the price will change more quickly for smaller
@@ -215,7 +215,7 @@ our case:
 	\label{eq:LMSRprice}
 	p_b(q) = \frac{e^{q/b}}{1+e^{q/b}}
 \end{equation}
-
+%
 Upon market creation a user is only given the option to buy a positive number
 of shares -- otherwise, it would make more sense for the user to create a
 market for the opposite outcome. After this, the custom security is created and
@@ -325,7 +325,7 @@ and the probability that, given that $i$ receives a negative signal, another
 randomly chosen arbiter $j$ receives a positive signal. Since we cannot assume
 arbiters to act truthfully, this is more complicated than simply counting the
 types of reports received. Instead, we use information about signal error rates
-$Pr[x_i=1|X=1]$ and $Pr[x_i=1|X=0]$ based on past market outcomes and past
+$\Pr[x_i=1|X=1]$ and $\Pr[x_i=1|X=0]$ based on past market outcomes and past
 reporting behaviour for each arbiter $i$. This is a fairly involved process:
 first we gather all securities that have been reported on in the past by $i$
 and whose outcome has been determined; we then iterate through each one of
@@ -365,22 +365,22 @@ shown in Listing~\ref{lst:reportingHistory}.
 
 We then use this history to compute the probability that, assuming the arbiter
 has always acted truthfully, their signal has been correct in telling them the
-true outcome of the event. We refer to these probabilities, $Pr[x_i=1|X=1]$ and
-$Pr[x_i=1|X=0]$, as a arbiter $i$'s positive and negative signal beliefs as a
-remnant of a previous implementation. Listing~\ref{lst:positiveBelief} shows
-how we calculate an arbiter's positive belief, with a similar method applying
-for computing the negative belief: for the arbiter's history restricted to the
-securities whose outcome was reported as positive by the majority of arbiters,
-we count the number of times this arbiter also reported a positive outcome,
-thus giving us the arbiter's signal error probability given we know the outcome
-is (more likely to have been) positive. If there have been no positive
-outcomes, then we assume the arbiter has a perfect signal. Calculating the
-negative signal belief is done in a similar manner: first we collect items of
-the arbiter's reporting history where the security was mostly reported as a
-negative outcome, then we count the number of times this arbiter submitted a
-positive report. Again we assume in the lack of markets with negative outcomes
-that the arbiter has a perfect signal. We repeat this to compute the positive
-and negative signal beliefs for each arbiter.
+true outcome of the event. We refer to these probabilities, $\Pr[x_i=1|X=1]$
+and $\Pr[x_i=1|X=0]$, as a arbiter $i$'s positive and negative signal beliefs
+as a remnant of a previous implementation. Listing~\ref{lst:positiveBelief}
+shows how we calculate an arbiter's positive belief, with a similar method
+applying for computing the negative belief: for the arbiter's history
+restricted to the securities whose outcome was reported as positive by the
+majority of arbiters, we count the number of times this arbiter also reported a
+positive outcome, thus giving us the arbiter's signal error probability given
+we know the outcome is (more likely to have been) positive. If there have been
+no positive outcomes, then we assume the arbiter has a perfect signal.
+Calculating the negative signal belief is done in a similar manner: first we
+collect items of the arbiter's reporting history where the security was mostly
+reported as a negative outcome, then we count the number of times this arbiter
+submitted a positive report. Again we assume in the lack of markets with
+negative outcomes that the arbiter has a perfect signal. We repeat this to
+compute the positive and negative signal beliefs for each arbiter.
 
 \begin{lstlisting}[float,
 	label={lst:positiveBelief},
@@ -410,11 +410,12 @@ arbiter $j$, as follows:
 \begin{equation}
 	\label{eq:updateProbabilities}
 	\begin{aligned}
-		\mu_1^i & = Pr[x_j=1|x_i=1] \\
-		& = Pr[x_j=1|X=0] \cdot Pr[X=0|x_i=1] + Pr[x_j=1|X=1] \cdot Pr[X=1|x_i=1]
+		\mu_1^i & = \Pr[x_j=1|x_i=1] \\
+		& = \Pr[x_j=1|X=0] \cdot \Pr[X=0|x_i=1] + \Pr[x_j=1|X=1] \cdot
+		\Pr[X=1|x_i=1]
 	\end{aligned}
 \end{equation}
-
+%
 We use the same approach to compute $\mu_0^i$ for each $i$. The final values of
 $\mu_1$ and $\mu_0$ are then calculated by taking the minimum and maximum
 across all $\mu_1^i$ and $\mu_0^i$, respectively. Thus we have common update
@@ -473,12 +474,12 @@ by walking through the shuffled list and collecting adjacent elements as pairs.
 For each set of paired arbiters we then retrieve their reports and signal
 beliefs from the hash tables and compute, for each arbiter $i$ in the pair, the
 values of $\mu_1^i$ and $\mu_0^i$ according to
-Equation~\ref{eq:updateProbabilities}, where the randomly chosen $j$ is simply
-the partner with whom they have been paired. We push these values to a list so
-we may then compute the minimum value of $\mu_1^i$ and maximum value of
+equation~\eqref{eq:updateProbabilities}, where the randomly chosen $j$ is
+simply the partner with whom they have been paired. We push these values to a
+list so we may then compute the minimum value of $\mu_1^i$ and maximum value of
 $\mu_0^i$ across all arbiters. Finally, to compute the smallest $k$ to satisfy
-Equation~\ref{eq:kBoundN} we set $k = \max_i 2|n_i|/m\delta$, and use this to
-pay arbiters according to Equation~\ref{eq:oneOverPrior}.
+inequality~\eqref{eq:kBoundN} we set $k = \max_i 2|n_i|/m\delta$, and use this
+to pay arbiters according to equation~\eqref{eq:oneOverPrior}.
 
 \subsection{Server}
 
@@ -558,7 +559,8 @@ consistent user information across different webpages within the same session,
 such as the user's budget or their portfolio of securities. Finally, users
 mostly interact with the market through forms: Hunchentoot provides the
 \code{get-parameter}, \code{post-parameter}, and \code{parameter} functions to
-retrieve the values these forms send to and from the different webpages.
+retrieve the values from these forms and send them to and from the different
+webpages.
 
 % session handling
 % sending data e.g. (parameter ...)
@@ -571,7 +573,7 @@ In Sections~\ref{sec:database}, \ref{sec:trading}, \ref{sec:arbitration}, and
 \ref{sec:server} we have detailed the manner in which we achieve the goals laid
 out in Section~\ref{enm:goals} which implement the core features of any
 prediction market, as well as the behaviour that makes the peer prediction
-mechanism of Freeman et al.\ unique. In this section we shall detail the how we
+mechanism of Freeman et al.\ unique. In this section we shall detail how we
 make our prediction market more user-friendly and intuitive to use.
 
 The most important aspect behind making the web application responsive is the
@@ -579,22 +581,22 @@ integration of asynchronous server communications so that we can display
 up-to-date information to the user without a page refresh, as well as trigger
 markets to close trading at the correct time. For this we use the Quicklisp
 libraries Parenscript coupled with Smackjack to translate Lisp code to
-Javascript and allow us to communicate asynchronously with the server. We first
+JavaScript and allow us to communicate asynchronously with the server. We first
 use Parenscript for form validation on the client-side, and in particular to
 ensure that all required form fields are completed without needing to send the
 entire form to the server, only for it to potentially be incomplete.
 Parenscript provides the function \code{ps-inline}, which allows us to insert
-Lisp code, that will be converted to a valid Javascript program, within the
+Lisp code, that will be converted to a valid JavaScript program, within the
 CL-WHO defined pages. We can therefore validate forms before being sent to the
 server with \code{(form :action "create-market" :method :POST :onsubmit
 (ps-inline ...))}. We implement form validation using a macro:
 Listing~\ref{lst:nonEmptyMacro} shows the three functions we define to
 dynamically check for completed fields. The function \code{make-nonempty-check}
 simply writes Lisp code that, by the time it is called within \code{ps-inline}
-will expand to the Javascript statement \code{field.value == 0}. The function
+will expand to the JavaScript statement \code{field.value == 0}. The function
 \code{make-nonempty-list} allows us to simply specify a list of fields that we
 require to be non-empty and have it generate a collection of non-empty checks.
-Finally the macro \code{nonempty-fields} calls the previous function and
+Finally, the macro \code{nonempty-fields} calls the previous function and
 splices it from a list to successive arguments to the \code{or} function. This
 is all wrapped within a call to \code{ps-inline}, yielding something similar
 to:
@@ -628,12 +630,12 @@ if (a.value == "" || b.value == "" || ... ) {
 \end{lstlisting}
 
 We use the Smackjack library in conjunction with Parenscript to implement AJAX.
-Similarly to how he defined functions to execute when we load a specific URL in
-Section~\ref{sec:server}, we must also push our various AJAX functions to the
-dispatch table: Hunchentoot provides a special data structure, similar to the
-\code{easy-acceptor}, that handles all asynchronous calls in the form of the
-\code{ajax-processor}. We then create an AJAX dispatcher from this and push it
-to the dispatch table as before: 
+Similarly to how we defined the webpage functions that execute when loading a
+specific URL in Section~\ref{sec:server}, we must also push our various AJAX
+functions to the dispatch table: Hunchentoot provides a special data structure,
+similar to the \code{easy-acceptor}, that handles all asynchronous calls in the
+form of the \code{ajax-processor}. We then create an AJAX dispatcher from this
+and push it to the dispatch table as before: 
 
 \begin{lstlisting}[
 	label={},
@@ -656,15 +658,15 @@ One manner in which we use this asynchronous communication is to quote a
 projected cost of a transaction to a user looking to trade. Since we require
 the number of shares a trader is looking to buy or sell in order to quote
 $C_b(q')-C_b(q)$, and we wish to do this without a page refresh, we implement
-the write the cost function as an AJAX function that takes the user's desired
-quantity of shares and the current total number of shares in the security to
-quote the cost. The interface we present to the user restricts them to entering
-positive quantities only and checking a button to specify whether to buy or
-sell (since entering a negative number to sell could be confusing), hence we
-also need the value of this radio button to compute the transaction cost. This
-function is given in Listing~\ref{lst:ajaxTransactionCost}. The function is now
-defined within Smackjack's namespace: next we need to define the function that
-calls it asynchronously in Javascript.
+the cost function as an AJAX function that takes the user's desired quantity of
+shares and the current total number of shares in the security to quote the
+cost. The interface we present to the user restricts them to entering positive
+quantities only and checking a button to specify whether to buy or sell (since
+entering a negative number to sell could be confusing), hence we also need the
+value of this radio button to compute the transaction cost. This function is
+given in Listing~\ref{lst:ajaxTransactionCost}. The function is now defined
+within Smackjack's namespace: next we need to define the function that calls it
+asynchronously in JavaScript.
 
 \begin{lstlisting}[float,
 	label={lst:ajaxTransactionCost},
@@ -685,7 +687,7 @@ calls it asynchronously in Javascript.
 					(msr:transaction-cost q* q))))
 \end{lstlisting}
 
-The Javascript functions that call the AJAX functions need to be defined within
+The JavaScript functions that call the AJAX functions need to be defined within
 the usual \code{script} tags, for which we simply wrap the appropriate Lisp
 code in the \code{(:script ...)} macro provided by Parenscript. For retrieving
 the transaction cost of a given trade, we define the function
