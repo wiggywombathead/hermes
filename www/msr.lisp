@@ -16,7 +16,7 @@
 (defpackage :msr
   (:use :cl)
   (:export :share-price
-		   :transaction-cost))
+           :transaction-cost))
 
 (in-package :msr)
 
@@ -24,13 +24,13 @@
 (defconstant +liquidity+ 10)	; TODO: tune this parameter
 
 (defun share-price (q)
-  " computes share price p(q) "
+  "computes share price p(q)"
   (/ (exp (/ q +liquidity+)) (1+ (exp (/ q +liquidity+)))))
 
 (defun q-price (q)
-  " computes transaction cost C(Q) "
+  "computes transaction cost C(Q)"
   (* +liquidity+ (log (1+ (exp (/ q +liquidity+))))))
 
 (defun transaction-cost (q* q)
-  " compute the price to pay for (Q* - Q) shares of security "
+  "compute the price to pay for (Q* - Q) shares of security"
   (- (q-price q*) (q-price q)))
